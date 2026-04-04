@@ -6,6 +6,7 @@ import Onboarding from './pages/Onboarding'
 import Dashboard from './pages/Dashboard'
 import CampaignCreate from './pages/CampaignCreate'
 import CampaignEditor from './pages/CampaignEditor'
+import AiChat from './pages/AiChat'
 
 function App() {
   const [user, setUser] = useState(() => {
@@ -44,6 +45,7 @@ function App() {
         <Route path="/dashboard" element={user ? <Dashboard user={user} brand={brandConfig} onLogout={logout} /> : <Navigate to="/login" />} />
         <Route path="/campaign/create" element={user ? <CampaignCreate brand={brandConfig} /> : <Navigate to="/login" />} />
         <Route path="/campaign/editor" element={user ? <CampaignEditor brand={brandConfig} /> : <Navigate to="/login" />} />
+        <Route path="/chat" element={<AiChat />} />
         <Route path="*" element={<Navigate to={user ? "/dashboard" : "/login"} />} />
       </Routes>
     </Router>
