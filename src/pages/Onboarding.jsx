@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 import { HexColorPicker } from 'react-colorful'
 import Diamond from '../assets/Diamond'
 import Gold from '../assets/Gold'
@@ -70,7 +72,7 @@ const InfoIcon = () => (
   </svg>
 )
 
-export default function Onboarding({ onSave }) {
+export default function Onboarding({ onSave, user }) {
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
   const [storeName, setStoreName] = useState('')
@@ -118,8 +120,31 @@ export default function Onboarding({ onSave }) {
   const canProceedStep1 = storeName.trim().length > 0
   const canProceedStep2 = stylePreset && typography
 
-  const handleFinish = () => {
-    onSave({ businessName: storeName, region, category, logoPreview, stylePreset, typography, baseCanvas })
+  const handleFinish = async () => {
+    const config = { businessName: storeName, region, category, logoPreview, stylePreset, typography, baseCanvas, primaryColor, secondaryColor }
+    onSave(config)
+    if (user?.email) {
+      try {
+        await fetch(`${API_URL}/preferences`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: user.email,
+            business_name: storeName,
+            region,
+            category,
+            logo_preview: logoPreview,
+            style_preset: stylePreset,
+            typography,
+            base_canvas: baseCanvas,
+            primary_color: primaryColor,
+            secondary_color: secondaryColor,
+          }),
+        })
+      } catch {
+        // non-blocking: preferences saved locally even if backend unreachable
+      }
+    }
     navigate('/dashboard')
   }
 

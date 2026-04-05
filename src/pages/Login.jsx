@@ -2,13 +2,35 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import Diamond from '../assets/Diamond'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
 export default function Login({ onLogin }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    onLogin({ email, name: email.split('@')[0] })
+    setError('')
+    setLoading(true)
+    try {
+      const res = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.detail || 'Login failed')
+        return
+      }
+      onLogin(data.user)
+    } catch {
+      setError('Unable to reach server. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -72,12 +94,17 @@ export default function Login({ onLogin }) {
             />
           </div>
 
+          {error && (
+            <p className="text-[12px] text-red-500 text-center -mt-6">{error}</p>
+          )}
+
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full bg-linear-to-r from-primary to-primary-light py-4 rounded text-white text-[14px] font-bold uppercase tracking-[2.8px] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1),0_4px_6px_-4px_rgba(0,0,0,0.1)] hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer"
+            disabled={loading}
+            className="w-full bg-linear-to-r from-primary to-primary-light py-4 rounded text-white text-[14px] font-bold uppercase tracking-[2.8px] shadow-[0_10px_15px_-3px_rgba(0,0,0,0.1),0_4px_6px_-4px_rgba(0,0,0,0.1)] hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Sign In
+            {loading ? 'Signing In...' : 'Sign In'}
           </button>
         </form>
 
