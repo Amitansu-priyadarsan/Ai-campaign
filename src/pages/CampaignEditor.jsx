@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, X, Check, RefreshCw, Download, Clock, Lock, Monitor, Shield, Loader2 } from 'lucide-react'
 import Star from '../assets/Star'
@@ -8,85 +8,93 @@ const serif = "'Noto Serif', serif"
 const sans = 'Manrope, sans-serif'
 const nimbus = "'Nimbus Sans', Manrope, sans-serif"
 
-const FALLBACK_VARIATIONS = [
-  { id: 'A', label: 'Variation A', image: 'https://images.unsplash.com/photo-1583292650898-7d22cd27ca6f?w=500&h=670&fit=crop' },
-  { id: 'B', label: 'Variation B', image: 'https://images.unsplash.com/photo-1602751584552-8ba73aad10e1?w=500&h=670&fit=crop' },
-  { id: 'C', label: 'Variation C', image: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=500&h=670&fit=crop' },
-  { id: 'D', label: 'Variation D', image: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=500&h=670&fit=crop' },
+const PLACEHOLDERS = [
+  { id: 'A', label: 'Variation A' },
+  { id: 'B', label: 'Variation B' },
+  { id: 'C', label: 'Variation C' },
+  { id: 'D', label: 'Variation D' },
 ]
 
 export default function CampaignEditor({ brand }) {
   const navigate = useNavigate()
 
-  // Load generated images from sessionStorage (set by CampaignCreate)
-  const { generatedData, VARIATIONS } = useMemo(() => {
-    const raw = sessionStorage.getItem('campaign-generated')
-    if (raw) {
-      try {
-        const data = JSON.parse(raw)
-        const imgs = (data.images || [])
-          .filter(img => img.image)
-          .map(img => ({ id: img.id, label: img.label, image: img.image }))
-        return {
-          generatedData: data,
-          VARIATIONS: imgs.length > 0 ? imgs : FALLBACK_VARIATIONS,
-        }
-      } catch { /* fall through */ }
-    }
-    return { generatedData: null, VARIATIONS: FALLBACK_VARIATIONS }
-  }, [])
-
-  const metadata = generatedData?.metadata || null
-
+  const [metadata, setMetadata] = useState(null)
   const [step, setStep] = useState(2)
   const [selectedVariations, setSelectedVariations] = useState(new Set())
   const [refinementPrompt, setRefinementPrompt] = useState('')
   const [hoveredVariation, setHoveredVariation] = useState(null)
   const [published, setPublished] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [regenerating, setRegenerating] = useState(false)
-  const [variations, setVariations] = useState(VARIATIONS)
+  const [variations, setVariations] = useState([])
+  const [genError, setGenError] = useState(null)
+  const didFetch = useRef(false)
+
+  const callGenerate = async (config, refinement) => {
+    const res = await fetch(`${API_URL}/campaign/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(refinement ? { ...config, refinement } : config),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.detail || 'Generation failed')
+    return data
+  }
+
+  useEffect(() => {
+    if (didFetch.current) return
+    didFetch.current = true
+
+    const configRaw = sessionStorage.getItem('campaign-config')
+    if (!configRaw) {
+      setLoading(false)
+      setGenError('No campaign configuration found. Please start a new campaign.')
+      return
+    }
+
+    const run = async () => {
+      try {
+        const config = JSON.parse(configRaw)
+        const data = await callGenerate(config)
+        const imgs = (data.images || []).filter(i => i.image).map(i => ({ id: i.id, label: i.label, image: i.image }))
+        setVariations(imgs)
+        setMetadata(data.metadata || null)
+        if (imgs.length === 0) setGenError('No images were generated. Try again.')
+      } catch (err) {
+        setGenError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    run()
+  }, [])
 
   const handleRegenerate = async () => {
-    if (!generatedData || regenerating) return
+    if (regenerating) return
+    const configRaw = sessionStorage.getItem('campaign-config')
+    if (!configRaw) return
     setRegenerating(true)
+    setGenError(null)
     try {
-      // Re-read the stored campaign config from sessionStorage
-      const raw = sessionStorage.getItem('campaign-generated')
-      if (!raw) return
-      const prevData = JSON.parse(raw)
-      // We need the original jewelry image — stored in campaign-config
-      const configRaw = sessionStorage.getItem('campaign-config')
-      if (!configRaw) return
       const config = JSON.parse(configRaw)
-
-      const res = await fetch(`${API_URL}/campaign/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...config,
-          refinement: refinementPrompt || undefined,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.detail || 'Regeneration failed')
-
-      const imgs = (data.images || [])
-        .filter(img => img.image)
-        .map(img => ({ id: img.id, label: img.label, image: img.image }))
+      const data = await callGenerate(config, refinementPrompt || undefined)
+      const imgs = (data.images || []).filter(i => i.image).map(i => ({ id: i.id, label: i.label, image: i.image }))
       if (imgs.length > 0) {
         setVariations(imgs)
         setSelectedVariations(new Set())
-        sessionStorage.setItem('campaign-generated', JSON.stringify(data))
+        setMetadata(data.metadata || null)
+      } else {
+        setGenError('No images were generated. Try again.')
       }
     } catch (err) {
-      console.error('Regeneration error:', err)
+      setGenError(err.message)
     } finally {
       setRegenerating(false)
     }
   }
 
   // Pick first selected variation for step 3 preview
-  const reviewVariation = variations.find(v => selectedVariations.has(v.id)) || variations[0]
+  const reviewVariation = variations.find(v => selectedVariations.has(v.id)) || variations[0] || null
 
   const toggleVariation = (id) => {
     setSelectedVariations(prev => {
@@ -97,9 +105,53 @@ export default function CampaignEditor({ brand }) {
     })
   }
 
-  const handlePublish = () => {
-    setPublished(true)
-    setTimeout(() => navigate('/dashboard'), 1800)
+  const [publishing, setPublishing] = useState(false)
+
+  const handlePublish = async () => {
+    if (publishing) return
+    setPublishing(true)
+    setGenError(null)
+    try {
+      const userRaw = localStorage.getItem('ai-campaign-user')
+      const user = userRaw ? JSON.parse(userRaw) : null
+      if (!user?.access_token) throw new Error('Not authenticated')
+
+      const selected = variations.filter(v => selectedVariations.has(v.id))
+      const heroVariation = selected[0] || reviewVariation
+      if (!heroVariation) throw new Error('No variation selected')
+
+      const title = metadata?.muse
+        ? `${metadata.muse} × ${metadata.location || 'Campaign'}`
+        : 'New Campaign'
+
+      const res = await fetch(`${API_URL}/campaign/save`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.access_token}`,
+        },
+        body: JSON.stringify({
+          title,
+          status: 'Active',
+          platform: 'Instagram',
+          image: heroVariation.image,
+          metadata: {
+            ...(metadata || {}),
+            variations: selected.map(v => ({ id: v.id, label: v.label, image: v.image })),
+          },
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.detail || 'Save failed')
+
+      setPublished(true)
+      sessionStorage.removeItem('campaign-config')
+      setTimeout(() => navigate('/dashboard'), 1400)
+    } catch (err) {
+      setGenError(err.message)
+    } finally {
+      setPublishing(false)
+    }
   }
 
   /* ─── Shared Top Nav ─── */
@@ -162,9 +214,25 @@ export default function CampaignEditor({ brand }) {
             </div>
           </div>
 
+          {genError && (
+            <div className="mb-6 p-4 rounded-xl" style={{ background: 'rgba(220,38,38,0.06)', outline: '1px solid rgba(220,38,38,0.20)', outlineOffset: -1, fontFamily: sans, fontSize: 13, color: '#dc2626' }}>
+              {genError}
+            </div>
+          )}
+
           {/* Variation Grid — 4 columns, all selectable */}
           <div className="grid grid-cols-4 gap-4 mb-12">
-            {variations.map(v => {
+            {(loading || (regenerating && variations.length === 0)) && PLACEHOLDERS.map(p => (
+              <div key={p.id} className="relative rounded-2xl overflow-hidden"
+                style={{ outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1, height: 358, background: '#F6F3F2' }}>
+                <div className="shimmer-block" style={{ width: '100%', height: '100%' }} />
+                <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
+                  <span style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#7F7667' }}>{p.label}</span>
+                  <Loader2 size={14} className="animate-spin" style={{ color: '#775A19' }} />
+                </div>
+              </div>
+            ))}
+            {!loading && variations.map(v => {
               const isSelected = selectedVariations.has(v.id)
               const isHovered = hoveredVariation === v.id
               return (
@@ -316,7 +384,13 @@ export default function CampaignEditor({ brand }) {
           {/* Main Image */}
           <div className="flex-1 relative rounded-3xl overflow-hidden"
             style={{ background: '#F6F3F2', boxShadow: '0px 40px 100px -20px rgba(119,90,25,0.15)', outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1 }}>
-            <img src={reviewVariation.image} alt="Final render" className="w-full object-cover" style={{ minHeight: 600 }} />
+            {reviewVariation ? (
+              <img src={reviewVariation.image} alt="Final render" className="w-full object-cover" style={{ minHeight: 600 }} />
+            ) : (
+              <div style={{ minHeight: 600 }} className="w-full flex items-center justify-center">
+                <span style={{ fontFamily: sans, fontSize: 14, color: '#7F7667' }}>No selection</span>
+              </div>
+            )}
             {/* 8K badge */}
             <div className="absolute top-6 right-6 flex items-center gap-2 px-4 py-2 rounded-xl"
               style={{ background: 'rgba(0,0,0,0.40)', outline: '1px solid rgba(255,255,255,0.20)', outlineOffset: -1, backdropFilter: 'blur(6px)' }}>
@@ -407,11 +481,20 @@ export default function CampaignEditor({ brand }) {
               style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#5F5E5E' }}>
               Preview on Device
             </button>
-            <button onClick={handlePublish}
+            <button onClick={handlePublish} disabled={publishing || published}
               className="flex items-center gap-3 px-12 py-5 rounded-xl cursor-pointer transition-opacity hover:opacity-90"
-              style={{ background: 'linear-gradient(90deg, #775A19, #C5A059)', boxShadow: '0px 25px 50px -12px rgba(119,90,25,0.30)' }}>
-              <span style={{ fontFamily: sans, fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2.1, color: 'white' }}>Finalize & Publish</span>
-              <Star />
+              style={{ background: 'linear-gradient(90deg, #775A19, #C5A059)', boxShadow: '0px 25px 50px -12px rgba(119,90,25,0.30)', opacity: publishing || published ? 0.6 : 1 }}>
+              {publishing ? (
+                <>
+                  <Loader2 size={15} className="animate-spin" style={{ color: 'white' }} />
+                  <span style={{ fontFamily: sans, fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2.1, color: 'white' }}>Publishing...</span>
+                </>
+              ) : (
+                <>
+                  <span style={{ fontFamily: sans, fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2.1, color: 'white' }}>Finalize & Publish</span>
+                  <Star />
+                </>
+              )}
             </button>
           </div>
         </div>

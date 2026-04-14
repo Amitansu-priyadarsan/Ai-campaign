@@ -103,9 +103,13 @@ function DashboardContent({ navigate, activeTab, setActiveTab, stats, analytics,
           {(campaigns || []).slice(0, 3).map(c => (
             <div key={c.id} className="flex flex-col cursor-pointer group" onClick={() => navigate('/campaign/editor')}>
               <div className="rounded overflow-hidden flex items-center justify-center" style={{ background: '#F0EDED', minHeight: 268 }}>
-                <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(119,90,25,0.10)' }}>
-                  <Megaphone size={18} style={{ color: '#775A19' }} />
-                </div>
+                {c.image ? (
+                  <img src={c.image} alt={c.title} className="w-full h-full object-cover" style={{ minHeight: 268 }} />
+                ) : (
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(119,90,25,0.10)' }}>
+                    <Megaphone size={18} style={{ color: '#775A19' }} />
+                  </div>
+                )}
               </div>
               <div className="mt-4">
                 <div style={{ fontFamily: serif, fontSize: 14, fontWeight: 400, color: '#1C1B1B', lineHeight: '20px' }}>{c.title}</div>

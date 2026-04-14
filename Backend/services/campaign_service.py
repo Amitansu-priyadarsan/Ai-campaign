@@ -1,6 +1,8 @@
 import base64
-import google.generativeai as genai
+from typing import Optional
 from fastapi import HTTPException
+from google.genai import types as genai_types
+from core.config import genai_client
 from models.campaign import CampaignGenerateRequest
 
 
@@ -27,11 +29,27 @@ def build_generation_prompt(angle_desc: str, muse_label: str, draping: str, loca
     )
 
 
+def _extract_image_b64(response) -> Optional[str]:
+    """Pull the first inline image out of a gemini image-gen response."""
+    if not response or not response.candidates:
+        return None
+    for cand in response.candidates:
+        parts = getattr(cand.content, "parts", None) or []
+        for part in parts:
+            inline = getattr(part, "inline_data", None)
+            if inline and getattr(inline, "data", None):
+                data = inline.data
+                if isinstance(data, bytes):
+                    return base64.b64encode(data).decode("utf-8")
+                # SDK sometimes returns base64 string already
+                return data if isinstance(data, str) else None
+    return None
+
+
 async def generate_campaign(req: CampaignGenerateRequest) -> dict:
     try:
-        image_data = base64.b64decode(req.jewelry_image)
-        image_part = {"mime_type": "image/png", "data": image_data}
-        gen_model = genai.GenerativeModel("gemini-2.0-flash-exp")
+        image_bytes = base64.b64decode(req.jewelry_image)
+        jewelry_part = genai_types.Part.from_bytes(data=image_bytes, mime_type="image/png")
 
         generated_images = []
         for i, angle_desc in enumerate(ANGLE_DESCRIPTIONS):
@@ -40,38 +58,25 @@ async def generate_campaign(req: CampaignGenerateRequest) -> dict:
                 req.location, req.draping_physics
             )
             try:
-                response = gen_model.generate_content(
-                    [prompt, image_part],
-                    generation_config=genai.GenerationConfig(
-                        response_mime_type="image/png",
-                    ),
+                response = genai_client.models.generate_content(
+                    model="gemini-2.5-flash-image",
+                    contents=[prompt, jewelry_part],
                 )
-                if response.candidates and response.candidates[0].content.parts:
-                    for part in response.candidates[0].content.parts:
-                        if hasattr(part, "inline_data") and part.inline_data:
-                            img_b64 = base64.b64encode(part.inline_data.data).decode("utf-8")
-                            generated_images.append({
-                                "id": chr(65 + i),
-                                "label": f"Variation {chr(65 + i)}",
-                                "angle": angle_desc,
-                                "image": f"data:image/png;base64,{img_b64}",
-                            })
-                            break
-                    else:
-                        generated_images.append({
-                            "id": chr(65 + i),
-                            "label": f"Variation {chr(65 + i)}",
-                            "angle": angle_desc,
-                            "image": None,
-                            "error": "No image generated for this angle",
-                        })
+                img_b64 = _extract_image_b64(response)
+                if img_b64:
+                    generated_images.append({
+                        "id": chr(65 + i),
+                        "label": f"Variation {chr(65 + i)}",
+                        "angle": angle_desc,
+                        "image": f"data:image/png;base64,{img_b64}",
+                    })
                 else:
                     generated_images.append({
                         "id": chr(65 + i),
                         "label": f"Variation {chr(65 + i)}",
                         "angle": angle_desc,
                         "image": None,
-                        "error": "Empty response from model",
+                        "error": "No image returned for this angle",
                     })
             except Exception as angle_err:
                 generated_images.append({

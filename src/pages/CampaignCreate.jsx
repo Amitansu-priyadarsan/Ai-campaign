@@ -70,17 +70,8 @@ export default function CampaignCreate({ brand }) {
         location: selectedLocation,
         draping_physics: Number(drapingPhysics),
       }
-      // Store config for regeneration in editor
+      // Store config so the editor can call the backend and show shimmer while loading
       sessionStorage.setItem('campaign-config', JSON.stringify(payload))
-      const res = await fetch(`${API_URL}/campaign/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.detail || 'Generation failed')
-      // Store generated images and metadata for the editor page
-      sessionStorage.setItem('campaign-generated', JSON.stringify(data))
       navigate('/campaign/editor')
     } catch (err) {
       setGenError(err.message)

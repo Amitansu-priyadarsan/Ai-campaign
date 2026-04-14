@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Header
 from typing import Optional
-from core.config import preferences_store, campaigns_store
+from core.config import preferences_store
 from core.supabase import get_user_from_token
+from services.campaigns_db_service import list_campaigns
+from services.profile_service import get_profile
 
 router = APIRouter()
 
@@ -10,11 +12,18 @@ router = APIRouter()
 async def get_dashboard(authorization: Optional[str] = Header(default=None)):
     """Return aggregated dashboard data for the authenticated user."""
     user = await get_user_from_token(authorization)
+    user_id = user.get("id")
     email = user.get("email", "")
+
     prefs = preferences_store.get(email)
+    if not prefs:
+        profile = await get_profile(user_id)
+        prefs = profile.get("preferences")
+        if prefs:
+            preferences_store[email] = prefs
     brand = prefs if prefs else None
 
-    user_campaigns = campaigns_store.get(email, [])
+    user_campaigns = await list_campaigns(user_id)
     total = len(user_campaigns)
     active = sum(1 for c in user_campaigns if c.get("status") == "Active")
 

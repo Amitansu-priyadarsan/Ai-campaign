@@ -12,6 +12,17 @@
   --font-sans: 'Manrope', system-ui, -apple-system, sans-serif;
 }
 
+.shimmer-block {
+  background: linear-gradient(90deg, #F0EDED 0%, #F6F3F2 50%, #F0EDED 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 @layer base {
   * {
     box-sizing: border-box;
