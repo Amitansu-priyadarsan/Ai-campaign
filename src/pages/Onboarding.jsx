@@ -72,7 +72,7 @@ const InfoIcon = () => (
   </svg>
 )
 
-export default function Onboarding({ onSave, user }) {
+export default function Onboarding({ onSave, user, onUpdateUser }) {
   const navigate = useNavigate()
   const [step, setStep] = useState(1)
   const [storeName, setStoreName] = useState('')
@@ -127,7 +127,10 @@ export default function Onboarding({ onSave, user }) {
       try {
         await fetch(`${API_URL}/preferences`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${user.access_token}`,
+          },
           body: JSON.stringify({
             email: user.email,
             business_name: storeName,
@@ -145,11 +148,13 @@ export default function Onboarding({ onSave, user }) {
         // non-blocking: preferences saved locally even if backend unreachable
       }
     }
+    if (onUpdateUser) onUpdateUser({ isOnboarded: true })
     navigate('/dashboard')
   }
 
   const handleSkip = () => {
     onSave({ businessName: storeName || 'My Store', region: region || 'North America', category: category || 'mixed', logoPreview: null, platforms: ['instagram'] })
+    if (onUpdateUser) onUpdateUser({ isOnboarded: true })
     navigate('/dashboard')
   }
 

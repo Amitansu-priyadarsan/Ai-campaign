@@ -1,7 +1,9 @@
 import { useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Upload, X, ChevronDown, ArrowRight, Monitor } from 'lucide-react'
+import { ArrowLeft, Upload, X, ChevronDown, ArrowRight, Monitor, Loader2 } from 'lucide-react'
 import Star from '../assets/Star'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 const serif = "'Noto Serif', serif"
 const sans = 'Manrope, sans-serif'
@@ -31,6 +33,8 @@ export default function CampaignCreate({ brand }) {
   const [selectedLocation, setSelectedLocation] = useState('Palace Courtyard')
   const [drapingPhysics, setDrapingPhysics] = useState(65)
   const [showDrapingDropdown, setShowDrapingDropdown] = useState(false)
+  const [generating, setGenerating] = useState(false)
+  const [genError, setGenError] = useState(null)
 
   const handleFileUpload = (e) => {
     const file = e.target.files?.[0]
@@ -41,6 +45,49 @@ export default function CampaignCreate({ brand }) {
   }
 
   const clearUpload = () => setUploadedImage(null)
+
+  const fileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(reader.result.split(',')[1])
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
+
+  const handleGenerate = async () => {
+    if (!uploadedImage) return
+    setGenerating(true)
+    setGenError(null)
+    try {
+      const base64Image = await fileToBase64(uploadedImage.file)
+      const selectedMuseObj = MUSE_OPTIONS.find(m => m.id === selectedMuse)
+      const payload = {
+        jewelry_image: base64Image,
+        muse_id: selectedMuse,
+        muse_label: selectedMuseObj?.label || `Muse ${selectedMuse}`,
+        draping: selectedDraping,
+        location: selectedLocation,
+        draping_physics: Number(drapingPhysics),
+      }
+      // Store config for regeneration in editor
+      sessionStorage.setItem('campaign-config', JSON.stringify(payload))
+      const res = await fetch(`${API_URL}/campaign/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.detail || 'Generation failed')
+      // Store generated images and metadata for the editor page
+      sessionStorage.setItem('campaign-generated', JSON.stringify(data))
+      navigate('/campaign/editor')
+    } catch (err) {
+      setGenError(err.message)
+    } finally {
+      setGenerating(false)
+    }
+  }
 
   return (
     <div className="min-h-screen" style={{ background: '#FCF9F8' }}>
@@ -248,11 +295,29 @@ export default function CampaignCreate({ brand }) {
               style={{ fontFamily: sans, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.2, color: '#5F5E5E' }}>
               Save Preset
             </button>
-            <button onClick={() => navigate('/campaign/editor')}
+            {genError && (
+              <span style={{ fontFamily: sans, fontSize: 12, color: '#dc2626' }}>{genError}</span>
+            )}
+            <button onClick={handleGenerate}
+              disabled={!uploadedImage || generating}
               className="flex items-center gap-3 px-10 py-5 rounded-xl cursor-pointer transition-opacity hover:opacity-90"
-              style={{ background: 'linear-gradient(90deg, #775A19, #C5A059)', boxShadow: '0px 25px 50px -12px rgba(119,90,25,0.30)' }}>
-              <span style={{ fontFamily: sans, fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2.1, color: 'white' }}>Next: Creative Canvas</span>
-              <ArrowRight size={15} style={{ color: 'white' }} />
+              style={{
+                background: 'linear-gradient(90deg, #775A19, #C5A059)',
+                boxShadow: '0px 25px 50px -12px rgba(119,90,25,0.30)',
+                opacity: (!uploadedImage || generating) ? 0.5 : 1,
+                pointerEvents: generating ? 'none' : 'auto',
+              }}>
+              {generating ? (
+                <>
+                  <Loader2 size={15} className="animate-spin" style={{ color: 'white' }} />
+                  <span style={{ fontFamily: sans, fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2.1, color: 'white' }}>Generating...</span>
+                </>
+              ) : (
+                <>
+                  <span style={{ fontFamily: sans, fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2.1, color: 'white' }}>Next: Creative Canvas</span>
+                  <ArrowRight size={15} style={{ color: 'white' }} />
+                </>
+              )}
             </button>
           </div>
         </div>

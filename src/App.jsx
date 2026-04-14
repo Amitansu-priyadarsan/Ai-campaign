@@ -31,6 +31,12 @@ function App() {
     localStorage.setItem('ai-campaign-user', JSON.stringify(userData))
   }
 
+  const updateUser = (updates) => {
+    const updated = { ...user, ...updates }
+    setUser(updated)
+    localStorage.setItem('ai-campaign-user', JSON.stringify(updated))
+  }
+
   const saveBrand = (config) => {
     setBrandConfig(config)
     localStorage.setItem('ai-campaign-brand', JSON.stringify(config))
@@ -57,9 +63,9 @@ function App() {
     <Router>
       <Routes>
         {/* ── User routes ── */}
-        <Route path="/login" element={!user ? <Login onLogin={login} /> : <Navigate to={brandConfig ? "/dashboard" : "/onboarding"} />} />
+        <Route path="/login" element={!user ? <Login onLogin={login} /> : <Navigate to={user.isOnboarded ? "/dashboard" : "/onboarding"} />} />
         <Route path="/signup" element={!user ? <Signup onSignup={login} /> : <Navigate to="/onboarding" />} />
-        <Route path="/onboarding" element={user ? <Onboarding onSave={saveBrand} user={user} /> : <Navigate to="/login" />} />
+        <Route path="/onboarding" element={user ? <Onboarding onSave={saveBrand} user={user} onUpdateUser={updateUser} /> : <Navigate to="/login" />} />
         <Route path="/dashboard" element={user ? <Dashboard user={user} brand={brandConfig} onLogout={logout} /> : <Navigate to="/login" />} />
         <Route path="/campaign/create" element={user ? <CampaignCreate brand={brandConfig} /> : <Navigate to="/login" />} />
         <Route path="/campaign/editor" element={user ? <CampaignEditor brand={brandConfig} /> : <Navigate to="/login" />} />

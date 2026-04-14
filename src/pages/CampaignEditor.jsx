@@ -1,13 +1,14 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, X, Check, RefreshCw, Download, Clock, Lock, Monitor, Shield } from 'lucide-react'
+import { ArrowLeft, ArrowRight, X, Check, RefreshCw, Download, Clock, Lock, Monitor, Shield, Loader2 } from 'lucide-react'
 import Star from '../assets/Star'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 const serif = "'Noto Serif', serif"
 const sans = 'Manrope, sans-serif'
 const nimbus = "'Nimbus Sans', Manrope, sans-serif"
 
-const VARIATIONS = [
+const FALLBACK_VARIATIONS = [
   { id: 'A', label: 'Variation A', image: 'https://images.unsplash.com/photo-1583292650898-7d22cd27ca6f?w=500&h=670&fit=crop' },
   { id: 'B', label: 'Variation B', image: 'https://images.unsplash.com/photo-1602751584552-8ba73aad10e1?w=500&h=670&fit=crop' },
   { id: 'C', label: 'Variation C', image: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=500&h=670&fit=crop' },
@@ -16,14 +17,76 @@ const VARIATIONS = [
 
 export default function CampaignEditor({ brand }) {
   const navigate = useNavigate()
+
+  // Load generated images from sessionStorage (set by CampaignCreate)
+  const { generatedData, VARIATIONS } = useMemo(() => {
+    const raw = sessionStorage.getItem('campaign-generated')
+    if (raw) {
+      try {
+        const data = JSON.parse(raw)
+        const imgs = (data.images || [])
+          .filter(img => img.image)
+          .map(img => ({ id: img.id, label: img.label, image: img.image }))
+        return {
+          generatedData: data,
+          VARIATIONS: imgs.length > 0 ? imgs : FALLBACK_VARIATIONS,
+        }
+      } catch { /* fall through */ }
+    }
+    return { generatedData: null, VARIATIONS: FALLBACK_VARIATIONS }
+  }, [])
+
+  const metadata = generatedData?.metadata || null
+
   const [step, setStep] = useState(2)
-  const [selectedVariations, setSelectedVariations] = useState(new Set(['B']))
+  const [selectedVariations, setSelectedVariations] = useState(new Set())
   const [refinementPrompt, setRefinementPrompt] = useState('')
   const [hoveredVariation, setHoveredVariation] = useState(null)
   const [published, setPublished] = useState(false)
+  const [regenerating, setRegenerating] = useState(false)
+  const [variations, setVariations] = useState(VARIATIONS)
+
+  const handleRegenerate = async () => {
+    if (!generatedData || regenerating) return
+    setRegenerating(true)
+    try {
+      // Re-read the stored campaign config from sessionStorage
+      const raw = sessionStorage.getItem('campaign-generated')
+      if (!raw) return
+      const prevData = JSON.parse(raw)
+      // We need the original jewelry image — stored in campaign-config
+      const configRaw = sessionStorage.getItem('campaign-config')
+      if (!configRaw) return
+      const config = JSON.parse(configRaw)
+
+      const res = await fetch(`${API_URL}/campaign/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...config,
+          refinement: refinementPrompt || undefined,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.detail || 'Regeneration failed')
+
+      const imgs = (data.images || [])
+        .filter(img => img.image)
+        .map(img => ({ id: img.id, label: img.label, image: img.image }))
+      if (imgs.length > 0) {
+        setVariations(imgs)
+        setSelectedVariations(new Set())
+        sessionStorage.setItem('campaign-generated', JSON.stringify(data))
+      }
+    } catch (err) {
+      console.error('Regeneration error:', err)
+    } finally {
+      setRegenerating(false)
+    }
+  }
 
   // Pick first selected variation for step 3 preview
-  const reviewVariation = VARIATIONS.find(v => selectedVariations.has(v.id)) || VARIATIONS[0]
+  const reviewVariation = variations.find(v => selectedVariations.has(v.id)) || variations[0]
 
   const toggleVariation = (id) => {
     setSelectedVariations(prev => {
@@ -101,7 +164,7 @@ export default function CampaignEditor({ brand }) {
 
           {/* Variation Grid — 4 columns, all selectable */}
           <div className="grid grid-cols-4 gap-4 mb-12">
-            {VARIATIONS.map(v => {
+            {variations.map(v => {
               const isSelected = selectedVariations.has(v.id)
               const isHovered = hoveredVariation === v.id
               return (
@@ -175,10 +238,20 @@ export default function CampaignEditor({ brand }) {
                 <button className="p-3 cursor-pointer" style={{ color: '#5F5E5E' }}>
                   <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
                 </button>
-                <button className="flex items-center gap-2 px-8 py-3.5 rounded-xl cursor-pointer transition-opacity hover:opacity-90"
-                  style={{ background: '#775A19', boxShadow: '0px 4px 6px -4px rgba(119,90,25,0.20), 0px 10px 15px -3px rgba(119,90,25,0.20)' }}>
-                  <span style={{ fontFamily: sans, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.2, color: 'white' }}>Regenerate</span>
-                  <RefreshCw size={12} style={{ color: 'white' }} />
+                <button onClick={handleRegenerate} disabled={regenerating}
+                  className="flex items-center gap-2 px-8 py-3.5 rounded-xl cursor-pointer transition-opacity hover:opacity-90"
+                  style={{ background: '#775A19', boxShadow: '0px 4px 6px -4px rgba(119,90,25,0.20), 0px 10px 15px -3px rgba(119,90,25,0.20)', opacity: regenerating ? 0.6 : 1 }}>
+                  {regenerating ? (
+                    <>
+                      <Loader2 size={12} className="animate-spin" style={{ color: 'white' }} />
+                      <span style={{ fontFamily: sans, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.2, color: 'white' }}>Generating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span style={{ fontFamily: sans, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.2, color: 'white' }}>Regenerate</span>
+                      <RefreshCw size={12} style={{ color: 'white' }} />
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -258,10 +331,10 @@ export default function CampaignEditor({ brand }) {
             <div className="p-8 rounded-3xl" style={{ background: 'white', boxShadow: '0px 1px 2px rgba(0,0,0,0.05)', outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1 }}>
               <div className="mb-6" style={{ fontFamily: serif, fontSize: 20, fontWeight: 400, color: '#1C1B1B' }}>Campaign Metadata</div>
               {[
-                { label: 'Jewelry', value: 'Diamond Ring' },
-                { label: 'Model', value: 'Selected (AI Muse #1)' },
-                { label: 'Attire', value: 'Kanjeevaram Silk' },
-                { label: 'Backdrop', value: 'Palace Courtyard' },
+                { label: 'Jewelry', value: metadata ? 'Uploaded Asset' : 'Diamond Ring' },
+                { label: 'Model', value: metadata ? metadata.muse : 'Selected (AI Muse #1)' },
+                { label: 'Attire', value: metadata ? metadata.draping : 'Kanjeevaram Silk' },
+                { label: 'Backdrop', value: metadata ? metadata.location : 'Palace Courtyard' },
               ].map((row, i, arr) => (
                 <div key={row.label} className="flex items-center justify-between py-3"
                   style={{ borderBottom: i < arr.length - 1 ? '1px solid rgba(209,197,180,0.10)' : 'none' }}>
@@ -301,7 +374,7 @@ export default function CampaignEditor({ brand }) {
                   All Selected ({selectedVariations.size})
                 </div>
                 <div className="flex gap-2">
-                  {VARIATIONS.filter(v => selectedVariations.has(v.id)).map(v => (
+                  {variations.filter(v => selectedVariations.has(v.id)).map(v => (
                     <img key={v.id} src={v.image} alt={v.label} className="w-16 h-16 rounded-lg object-cover"
                       style={{ outline: reviewVariation.id === v.id ? '2px solid #775A19' : '1px solid rgba(209,197,180,0.20)', outlineOffset: -1 }} />
                   ))}

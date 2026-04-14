@@ -1,7 +1,9 @@
 import { useNavigate } from 'react-router-dom'
 import { Plus, Bell, Settings, LogOut, BarChart3, Compass, Megaphone, LineChart, Tv, Upload, Palette, Type, Image, Eye, TrendingUp, Calendar, Clock, Instagram, Facebook, Play, PauseCircle, FileText, Layers, MessageCircle } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Star from '../assets/Star'
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 const NAV_ITEMS = [
   { icon: BarChart3, label: 'Dashboard', key: 'dashboard' },
@@ -12,58 +14,6 @@ const NAV_ITEMS = [
   { icon: MessageCircle, label: 'AI Chat', key: 'ai-chat' },
 ]
 
-const BAR_DATA = [
-  { value: 65, label: '12k', opacity: 0.10 },
-  { value: 105.63, label: '18k', opacity: 0.15 },
-  { value: 89.38, label: '15k', opacity: 0.20 },
-  { value: 146.25, label: '24k', opacity: 0.40 },
-  { value: 113.75, label: '20k', opacity: 0.25 },
-  { value: 195, label: '28.4k', opacity: 1 },
-]
-
-const CREATIVES = [
-  {
-    id: 1,
-    title: "L'Eclat Solitaire",
-    category: 'Instagram Grid • Active',
-    image: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&h=500&fit=crop',
-  },
-  {
-    id: 2,
-    title: 'Moonlight Tides',
-    category: 'Email Editorial • Draft',
-    image: 'https://images.unsplash.com/photo-1515562141589-67f0d569b6c4?w=400&h=500&fit=crop',
-  },
-  {
-    id: 3,
-    title: 'Chronos Aurum',
-    category: 'OOH Billboard • Scheduled',
-    image: 'https://images.unsplash.com/photo-1623998021446-45cd9b269c95?w=400&h=500&fit=crop',
-  },
-]
-
-const CAMPAIGNS_DATA = [
-  { id: 1, title: "L'Eclat Solitaire", status: 'Active', platform: 'Instagram Grid', date: 'Mar 15, 2026', impressions: '245K', conversions: '3.2%', image: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=200&h=200&fit=crop' },
-  { id: 2, title: 'Moonlight Tides', status: 'Draft', platform: 'Email Editorial', date: 'Mar 18, 2026', impressions: '—', conversions: '—', image: 'https://images.unsplash.com/photo-1515562141589-67f0d569b6c4?w=200&h=200&fit=crop' },
-  { id: 3, title: 'Chronos Aurum', status: 'Scheduled', platform: 'OOH Billboard', date: 'Mar 25, 2026', impressions: '—', conversions: '—', image: 'https://images.unsplash.com/photo-1623998021446-45cd9b269c95?w=200&h=200&fit=crop' },
-  { id: 4, title: 'Aurelia Collection', status: 'Completed', platform: 'Instagram + Facebook', date: 'Feb 28, 2026', impressions: '892K', conversions: '5.1%', image: 'https://images.unsplash.com/photo-1602751584552-8ba73aad10e1?w=200&h=200&fit=crop' },
-  { id: 5, title: 'Heritage Line', status: 'Active', platform: 'Multi-channel', date: 'Mar 10, 2026', impressions: '156K', conversions: '2.8%', image: 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=200&h=200&fit=crop' },
-]
-
-const INSIGHTS_DATA = {
-  topMetrics: [
-    { label: 'Total Reach', value: '3.8M', change: '+18%' },
-    { label: 'Engagement Rate', value: '6.2%', change: '+0.8%' },
-    { label: 'Click-through Rate', value: '4.1%', change: '+1.2%' },
-    { label: 'Revenue Impact', value: '$142K', change: '+24%' },
-  ],
-  channelPerformance: [
-    { channel: 'Instagram', reach: '1.8M', engagement: '7.2%', bar: 85 },
-    { channel: 'Facebook', reach: '980K', engagement: '4.8%', bar: 60 },
-    { channel: 'Email', reach: '650K', engagement: '8.1%', bar: 72 },
-    { channel: 'OOH', reach: '420K', engagement: '2.4%', bar: 35 },
-  ],
-}
 
 /* Shared style helpers */
 const serif = "'Noto Serif', serif"
@@ -78,7 +28,7 @@ const SectionTitle = ({ title, subtitle }) => (
 )
 
 /* ─── Section: Dashboard ─── */
-function DashboardContent({ navigate, activeTab, setActiveTab }) {
+function DashboardContent({ navigate, activeTab, setActiveTab, stats, analytics, campaigns }) {
   return (
     <>
       <div className="flex gap-6 mb-10">
@@ -101,15 +51,22 @@ function DashboardContent({ navigate, activeTab, setActiveTab }) {
             </div>
           </div>
           <div className="flex items-end gap-4 px-4 pb-4" style={{ height: 220 }}>
-            {BAR_DATA.map((bar, i) => (
-              <div key={i} className="flex-1 relative flex flex-col items-center">
-                {bar.opacity === 1 && <div style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, color: '#775A19', marginBottom: 8 }}>{bar.label}</div>}
-                <div className="w-full rounded-t-sm" style={{ height: bar.value, background: bar.opacity === 1 ? '#C5A059' : `rgba(119,90,25,${bar.opacity})` }} />
-              </div>
-            ))}
+            {(analytics?.weeklyReach || []).map((d, i, arr) => {
+              const max = Math.max(...arr.map(a => a.value), 1)
+              const isLast = i === arr.length - 1
+              const height = (d.value / max) * 195
+              const label = d.value >= 1000 ? `${(d.value / 1000).toFixed(0)}k` : String(d.value)
+              const opacity = isLast ? 1 : 0.1 + (i * 0.15)
+              return (
+                <div key={i} className="flex-1 relative flex flex-col items-center">
+                  {isLast && d.value > 0 && <div style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, color: '#775A19', marginBottom: 8 }}>{label}</div>}
+                  <div className="w-full rounded-t-sm" style={{ height: Math.max(height, 2), background: isLast ? '#C5A059' : `rgba(119,90,25,${opacity})` }} />
+                </div>
+              )
+            })}
           </div>
           <div className="flex gap-0 pt-8" style={{ borderTop: '1px solid rgba(209,197,180,0.10)' }}>
-            {[{ label: 'Impressions', value: '1.2M', color: '#1C1B1B' }, { label: 'Conversions', value: '4.8%', color: '#1C1B1B' }, { label: 'Brand Lift', value: '+12%', color: '#775A19' }].map(m => (
+            {[{ label: 'Impressions', value: stats?.totalReach ?? 0, color: '#1C1B1B' }, { label: 'Conversions', value: stats?.totalConversions ?? '0%', color: '#1C1B1B' }, { label: 'Revenue', value: stats?.revenue ?? '$0', color: '#775A19' }].map(m => (
               <div key={m.label} className="flex-1">
                 <div style={{ fontFamily: nimbus, fontSize: 9, fontWeight: 400, textTransform: 'uppercase', letterSpacing: 0.9, color: '#78716C' }}>{m.label}</div>
                 <div style={{ fontFamily: serif, fontSize: 24, fontWeight: 400, color: m.color, lineHeight: '32px' }}>{m.value}</div>
@@ -137,21 +94,22 @@ function DashboardContent({ navigate, activeTab, setActiveTab }) {
         </div>
       </div>
 
-      {/* Recent Creatives */}
+      {/* Recent Campaigns */}
       <div>
         <div className="flex items-center justify-between mb-8">
-          <SectionTitle title="Recent Creatives" subtitle="Active campaign assets" />
-          <button className="cursor-pointer pb-1" style={{ borderBottom: '1px solid rgba(119,90,25,0.20)', fontFamily: nimbus, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#775A19' }}>View Library</button>
+          <SectionTitle title="Recent Campaigns" subtitle="Your campaign assets" />
         </div>
         <div className="grid grid-cols-4 gap-5">
-          {CREATIVES.map(c => (
+          {(campaigns || []).slice(0, 3).map(c => (
             <div key={c.id} className="flex flex-col cursor-pointer group" onClick={() => navigate('/campaign/editor')}>
-              <div className="rounded overflow-hidden" style={{ background: '#F0EDED' }}>
-                <img src={c.image} alt={c.title} className="w-full h-[268px] object-cover group-hover:scale-105 transition-transform duration-500" />
+              <div className="rounded overflow-hidden flex items-center justify-center" style={{ background: '#F0EDED', minHeight: 268 }}>
+                <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(119,90,25,0.10)' }}>
+                  <Megaphone size={18} style={{ color: '#775A19' }} />
+                </div>
               </div>
               <div className="mt-4">
                 <div style={{ fontFamily: serif, fontSize: 14, fontWeight: 400, color: '#1C1B1B', lineHeight: '20px' }}>{c.title}</div>
-                <div style={{ fontFamily: nimbus, fontSize: 9, fontWeight: 400, textTransform: 'uppercase', letterSpacing: 0.9, color: '#78716C', marginTop: 4 }}>{c.category}</div>
+                <div style={{ fontFamily: nimbus, fontSize: 9, fontWeight: 400, textTransform: 'uppercase', letterSpacing: 0.9, color: '#78716C', marginTop: 4 }}>{c.platform} &bull; {c.status}</div>
               </div>
             </div>
           ))}
@@ -161,7 +119,9 @@ function DashboardContent({ navigate, activeTab, setActiveTab }) {
             <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4" style={{ background: 'white', boxShadow: '0px 1px 2px rgba(0,0,0,0.05)' }}>
               <Plus size={20} style={{ color: '#775A19' }} />
             </div>
-            <div style={{ fontFamily: nimbus, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#A8A29E' }}>New Creative</div>
+            <div style={{ fontFamily: nimbus, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#A8A29E' }}>
+              {(campaigns || []).length === 0 ? 'Create Your First Campaign' : 'New Campaign'}
+            </div>
           </div>
         </div>
       </div>
@@ -267,8 +227,9 @@ function BrandIdentityContent({ brand }) {
 }
 
 /* ─── Section: Campaigns ─── */
-function CampaignsContent({ navigate }) {
+function CampaignsContent({ navigate, campaigns }) {
   const statusColor = { Active: '#22C55E', Draft: '#A8A29E', Scheduled: '#C5A059', Completed: '#78716C' }
+  const data = campaigns || []
 
   return (
     <>
@@ -290,47 +251,64 @@ function CampaignsContent({ navigate }) {
         ))}
       </div>
 
-      {/* Campaign Table */}
-      <div className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(209,197,180,0.20)' }}>
-        {/* Header */}
-        <div className="grid grid-cols-12 gap-4 px-6 py-3" style={{ background: '#F6F3F2' }}>
-          {['Campaign', 'Status', 'Platform', 'Date', 'Impressions', 'Conversions'].map((h, i) => (
-            <div key={h} className={i === 0 ? 'col-span-4' : 'col-span-2'} style={{ fontFamily: nimbus, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: '#78716C' }}>
-              {h}
+      {data.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 rounded-lg" style={{ background: '#F6F3F2' }}>
+          <Megaphone size={32} style={{ color: '#A8A29E', marginBottom: 12 }} />
+          <div style={{ fontFamily: serif, fontSize: 18, color: '#1C1B1B', marginBottom: 4 }}>No campaigns yet</div>
+          <div style={{ fontFamily: sans, fontSize: 13, color: '#78716C', marginBottom: 16 }}>Create your first campaign to get started</div>
+          <button onClick={() => navigate('/campaign/create')} className="flex items-center gap-2 px-5 py-2.5 rounded-xl cursor-pointer transition-opacity hover:opacity-90"
+            style={{ background: '#775A19', color: 'white', fontFamily: sans, fontSize: 12, fontWeight: 600 }}>
+            <Plus size={16} /> Create Campaign
+          </button>
+        </div>
+      ) : (
+        <div className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(209,197,180,0.20)' }}>
+          {/* Header */}
+          <div className="grid grid-cols-12 gap-4 px-6 py-3" style={{ background: '#F6F3F2' }}>
+            {['Campaign', 'Status', 'Platform', 'Date', 'Impressions', 'Conversions'].map((h, i) => (
+              <div key={h} className={i === 0 ? 'col-span-4' : 'col-span-2'} style={{ fontFamily: nimbus, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: '#78716C' }}>
+                {h}
+              </div>
+            ))}
+          </div>
+          {/* Rows */}
+          {data.map(c => (
+            <div key={c.id} onClick={() => navigate('/campaign/editor')} className="grid grid-cols-12 gap-4 px-6 py-4 items-center cursor-pointer hover:bg-stone-50 transition-colors" style={{ borderTop: '1px solid rgba(209,197,180,0.12)' }}>
+              <div className="col-span-4 flex items-center gap-3">
+                <span style={{ fontFamily: serif, fontSize: 14, color: '#1C1B1B' }}>{c.title}</span>
+              </div>
+              <div className="col-span-2 flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full" style={{ background: statusColor[c.status] || '#A8A29E' }} />
+                <span style={{ fontFamily: sans, fontSize: 12, color: '#1C1B1B' }}>{c.status}</span>
+              </div>
+              <div className="col-span-2" style={{ fontFamily: sans, fontSize: 12, color: '#78716C' }}>{c.platform}</div>
+              <div className="col-span-2" style={{ fontFamily: sans, fontSize: 12, color: '#78716C' }}>{c.date}</div>
+              <div className="col-span-1" style={{ fontFamily: sans, fontSize: 12, color: '#1C1B1B', fontWeight: 500 }}>{c.impressions || '—'}</div>
+              <div className="col-span-1" style={{ fontFamily: sans, fontSize: 12, color: c.conversions && c.conversions !== '—' ? '#775A19' : '#78716C', fontWeight: 500 }}>{c.conversions || '—'}</div>
             </div>
           ))}
         </div>
-        {/* Rows */}
-        {CAMPAIGNS_DATA.map(c => (
-          <div key={c.id} onClick={() => navigate('/campaign/editor')} className="grid grid-cols-12 gap-4 px-6 py-4 items-center cursor-pointer hover:bg-stone-50 transition-colors" style={{ borderTop: '1px solid rgba(209,197,180,0.12)' }}>
-            <div className="col-span-4 flex items-center gap-3">
-              <img src={c.image} alt={c.title} className="w-10 h-10 rounded-lg object-cover" />
-              <span style={{ fontFamily: serif, fontSize: 14, color: '#1C1B1B' }}>{c.title}</span>
-            </div>
-            <div className="col-span-2 flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full" style={{ background: statusColor[c.status] }} />
-              <span style={{ fontFamily: sans, fontSize: 12, color: '#1C1B1B' }}>{c.status}</span>
-            </div>
-            <div className="col-span-2" style={{ fontFamily: sans, fontSize: 12, color: '#78716C' }}>{c.platform}</div>
-            <div className="col-span-2" style={{ fontFamily: sans, fontSize: 12, color: '#78716C' }}>{c.date}</div>
-            <div className="col-span-1" style={{ fontFamily: sans, fontSize: 12, color: '#1C1B1B', fontWeight: 500 }}>{c.impressions}</div>
-            <div className="col-span-1" style={{ fontFamily: sans, fontSize: 12, color: c.conversions !== '—' ? '#775A19' : '#78716C', fontWeight: 500 }}>{c.conversions}</div>
-          </div>
-        ))}
-      </div>
+      )}
     </>
   )
 }
 
 /* ─── Section: Insights ─── */
-function InsightsContent() {
+function InsightsContent({ stats }) {
+  const topMetrics = [
+    { label: 'Total Reach', value: stats?.totalReach ?? 0, change: '—' },
+    { label: 'Engagement Rate', value: stats?.avgEngagement ?? '0%', change: '—' },
+    { label: 'Conversions', value: stats?.totalConversions ?? '0%', change: '—' },
+    { label: 'Revenue', value: stats?.revenue ?? '$0', change: '—' },
+  ]
+
   return (
     <>
       <SectionTitle title="Insights" subtitle="Performance analytics & trends" />
 
       {/* Top Metrics */}
       <div className="grid grid-cols-4 gap-5 mb-8">
-        {INSIGHTS_DATA.topMetrics.map(m => (
+        {topMetrics.map(m => (
           <div key={m.label} className="p-6 rounded-lg" style={{ background: '#F6F3F2' }}>
             <div style={{ fontFamily: nimbus, fontSize: 9, fontWeight: 400, textTransform: 'uppercase', letterSpacing: 0.9, color: '#78716C' }}>{m.label}</div>
             <div className="flex items-end gap-3 mt-2">
@@ -346,17 +324,8 @@ function InsightsContent() {
         <div className="flex items-center gap-3 mb-6">
           <span style={{ fontFamily: nimbus, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#775A19' }}>Channel Performance</span>
         </div>
-        <div className="flex flex-col gap-5">
-          {INSIGHTS_DATA.channelPerformance.map(ch => (
-            <div key={ch.channel} className="flex items-center gap-6">
-              <div className="w-24" style={{ fontFamily: sans, fontSize: 13, fontWeight: 500, color: '#1C1B1B' }}>{ch.channel}</div>
-              <div className="flex-1 h-6 rounded-sm overflow-hidden" style={{ background: 'rgba(119,90,25,0.06)' }}>
-                <div className="h-full rounded-sm transition-all" style={{ width: `${ch.bar}%`, background: 'rgba(119,90,25,0.25)' }} />
-              </div>
-              <div className="w-20 text-right" style={{ fontFamily: sans, fontSize: 12, color: '#78716C' }}>{ch.reach}</div>
-              <div className="w-16 text-right" style={{ fontFamily: sans, fontSize: 12, fontWeight: 600, color: '#775A19' }}>{ch.engagement}</div>
-            </div>
-          ))}
+        <div className="flex flex-col items-center justify-center py-10">
+          <div style={{ fontFamily: sans, fontSize: 13, color: '#78716C' }}>No channel data available yet</div>
         </div>
       </div>
 
@@ -364,21 +333,15 @@ function InsightsContent() {
       <div className="grid grid-cols-2 gap-6">
         <div className="p-8 rounded-lg" style={{ background: '#F6F3F2' }}>
           <div style={{ fontFamily: nimbus, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#775A19', marginBottom: 16 }}>Top Performing Content</div>
-          {["L'Eclat Solitaire — 7.8% engagement", "Heritage Line — 6.4% engagement", "Moonlight Tides — 5.9% engagement"].map((item, i) => (
-            <div key={i} className="flex items-center gap-3 py-3" style={{ borderTop: i > 0 ? '1px solid rgba(209,197,180,0.12)' : 'none' }}>
-              <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ background: 'rgba(119,90,25,0.10)', fontFamily: sans, fontSize: 10, fontWeight: 700, color: '#775A19' }}>{i + 1}</div>
-              <span style={{ fontFamily: sans, fontSize: 13, color: '#1C1B1B' }}>{item}</span>
-            </div>
-          ))}
+          <div className="flex flex-col items-center justify-center py-6">
+            <div style={{ fontFamily: sans, fontSize: 13, color: '#78716C' }}>No campaign data yet</div>
+          </div>
         </div>
         <div className="p-8 rounded-lg" style={{ background: '#F6F3F2' }}>
           <div style={{ fontFamily: nimbus, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#775A19', marginBottom: 16 }}>AI Recommendations</div>
-          {['Increase posting frequency on Instagram Reels — engagement up 34% for video content', 'Schedule campaigns for Tuesday 10am — highest open rates detected', 'Consider OOH for Chronos Aurum — audience overlap with luxury watch segment is 82%'].map((rec, i) => (
-            <div key={i} className="flex items-start gap-3 py-3" style={{ borderTop: i > 0 ? '1px solid rgba(209,197,180,0.12)' : 'none' }}>
-              <Star />
-              <span style={{ fontFamily: sans, fontSize: 13, color: '#1C1B1B', lineHeight: '20px' }}>{rec}</span>
-            </div>
-          ))}
+          <div className="flex flex-col items-center justify-center py-6">
+            <div style={{ fontFamily: sans, fontSize: 13, color: '#78716C' }}>Create campaigns to get AI recommendations</div>
+          </div>
         </div>
       </div>
     </>
@@ -445,6 +408,26 @@ export default function Dashboard({ user, brand, onLogout }) {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('monthly')
   const [activeSection, setActiveSection] = useState('dashboard')
+  const [dashboardData, setDashboardData] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!user?.access_token) return
+    const fetchDashboard = async () => {
+      try {
+        const res = await fetch(`${API_URL}/dashboard`, {
+          headers: { 'Authorization': `Bearer ${user.access_token}` },
+        })
+        const data = await res.json()
+        if (data.success) setDashboardData(data)
+      } catch {
+        // fallback to hardcoded data
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchDashboard()
+  }, [user?.access_token])
 
   const PAGE_TITLES = {
     dashboard: { title: 'Good morning, Atelier.', subtitle: "Curating your brand's digital legacy." },
@@ -518,10 +501,10 @@ export default function Dashboard({ user, brand, onLogout }) {
 
         {/* Content */}
         <div className="px-10 pb-10">
-          {activeSection === 'dashboard' && <DashboardContent navigate={navigate} activeTab={activeTab} setActiveTab={setActiveTab} />}
-          {activeSection === 'brand-identity' && <BrandIdentityContent brand={brand} />}
-          {activeSection === 'campaigns' && <CampaignsContent navigate={navigate} />}
-          {activeSection === 'insights' && <InsightsContent />}
+          {activeSection === 'dashboard' && <DashboardContent navigate={navigate} activeTab={activeTab} setActiveTab={setActiveTab} stats={dashboardData?.stats} analytics={dashboardData?.analytics} campaigns={dashboardData?.campaigns} />}
+          {activeSection === 'brand-identity' && <BrandIdentityContent brand={dashboardData?.brand || brand} />}
+          {activeSection === 'campaigns' && <CampaignsContent navigate={navigate} campaigns={dashboardData?.campaigns} />}
+          {activeSection === 'insights' && <InsightsContent stats={dashboardData?.stats} />}
           {activeSection === 'studio' && <StudioContent navigate={navigate} />}
         </div>
 
