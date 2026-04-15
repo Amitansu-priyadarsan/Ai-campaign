@@ -1,5 +1,7 @@
 import base64
-from typing import Optional
+import json
+import asyncio
+from typing import Optional, AsyncGenerator
 from fastapi import HTTPException
 from google.genai import types as genai_types
 from core.config import genai_client
@@ -14,7 +16,8 @@ ANGLE_DESCRIPTIONS = [
 ]
 
 
-def build_generation_prompt(angle_desc: str, muse_label: str, draping: str, location: str, draping_physics: int) -> str:
+def build_generation_prompt(angle_desc, muse_label, draping, location, draping_physics):
+    # type: (str, str, str, str, int) -> str
     physics_style = "flowing and loose traditional drape" if draping_physics > 50 else "structured and modern fitted drape"
     return (
         f"Generate a photorealistic high-fashion jewelry campaign image. "
@@ -29,7 +32,8 @@ def build_generation_prompt(angle_desc: str, muse_label: str, draping: str, loca
     )
 
 
-def _extract_image_b64(response) -> Optional[str]:
+def _extract_image_b64(response):
+    # type: (...) -> Optional[str]
     """Pull the first inline image out of a gemini image-gen response."""
     if not response or not response.candidates:
         return None
@@ -41,61 +45,77 @@ def _extract_image_b64(response) -> Optional[str]:
                 data = inline.data
                 if isinstance(data, bytes):
                     return base64.b64encode(data).decode("utf-8")
-                # SDK sometimes returns base64 string already
                 return data if isinstance(data, str) else None
     return None
 
 
-async def generate_campaign(req: CampaignGenerateRequest) -> dict:
+def _generate_one(i, angle_desc, jewelry_part, req):
+    # type: (int, str, ..., CampaignGenerateRequest) -> dict
+    """Synchronous call — will be run via asyncio.to_thread."""
+    prompt = build_generation_prompt(
+        angle_desc, req.muse_label, req.draping,
+        req.location, req.draping_physics
+    )
     try:
-        image_bytes = base64.b64decode(req.jewelry_image)
-        jewelry_part = genai_types.Part.from_bytes(data=image_bytes, mime_type="image/png")
-
-        generated_images = []
-        for i, angle_desc in enumerate(ANGLE_DESCRIPTIONS):
-            prompt = build_generation_prompt(
-                angle_desc, req.muse_label, req.draping,
-                req.location, req.draping_physics
-            )
-            try:
-                response = genai_client.models.generate_content(
-                    model="gemini-2.5-flash-image",
-                    contents=[prompt, jewelry_part],
-                )
-                img_b64 = _extract_image_b64(response)
-                if img_b64:
-                    generated_images.append({
-                        "id": chr(65 + i),
-                        "label": f"Variation {chr(65 + i)}",
-                        "angle": angle_desc,
-                        "image": f"data:image/png;base64,{img_b64}",
-                    })
-                else:
-                    generated_images.append({
-                        "id": chr(65 + i),
-                        "label": f"Variation {chr(65 + i)}",
-                        "angle": angle_desc,
-                        "image": None,
-                        "error": "No image returned for this angle",
-                    })
-            except Exception as angle_err:
-                generated_images.append({
-                    "id": chr(65 + i),
-                    "label": f"Variation {chr(65 + i)}",
-                    "angle": angle_desc,
-                    "image": None,
-                    "error": str(angle_err),
-                })
-
+        response = genai_client.models.generate_content(
+            model="gemini-2.5-flash-preview",
+            contents=[prompt, jewelry_part],
+            config=genai_types.GenerateContentConfig(
+                response_modalities=["IMAGE", "TEXT"],
+            ),
+        )
+        img_b64 = _extract_image_b64(response)
+        if img_b64:
+            return {
+                "id": chr(65 + i),
+                "label": "Variation %s" % chr(65 + i),
+                "angle": angle_desc,
+                "image": "data:image/png;base64,%s" % img_b64,
+            }
         return {
-            "success": True,
-            "images": generated_images,
-            "metadata": {
-                "muse": req.muse_label,
-                "draping": req.draping,
-                "location": req.location,
-                "draping_physics": req.draping_physics,
-            },
+            "id": chr(65 + i),
+            "label": "Variation %s" % chr(65 + i),
+            "angle": angle_desc,
+            "image": None,
+            "error": "No image returned for this angle",
         }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
+    except Exception as err:
+        return {
+            "id": chr(65 + i),
+            "label": "Variation %s" % chr(65 + i),
+            "angle": angle_desc,
+            "image": None,
+            "error": str(err),
+        }
+
+
+async def generate_campaign_stream(req):
+    # type: (CampaignGenerateRequest) -> AsyncGenerator[str, None]
+    """SSE generator — yields each image as a separate event the moment it's ready."""
+    image_bytes = base64.b64decode(req.jewelry_image)
+    jewelry_part = genai_types.Part.from_bytes(data=image_bytes, mime_type="image/png")
+
+    metadata = {
+        "muse": req.muse_label,
+        "draping": req.draping,
+        "location": req.location,
+        "draping_physics": req.draping_physics,
+    }
+
+    # Send metadata first
+    yield "data: %s\n\n" % json.dumps({"type": "metadata", "metadata": metadata})
+
+    # Fire all 4 in parallel using asyncio tasks
+    tasks = []
+    for i, angle_desc in enumerate(ANGLE_DESCRIPTIONS):
+        task = asyncio.get_event_loop().run_in_executor(
+            None, _generate_one, i, angle_desc, jewelry_part, req
+        )
+        tasks.append(task)
+
+    # Stream each result as it completes
+    for coro in asyncio.as_completed(tasks):
+        result = await coro
+        yield "data: %s\n\n" % json.dumps({"type": "image", "image": result})
+
+    yield "data: %s\n\n" % json.dumps({"type": "done"})

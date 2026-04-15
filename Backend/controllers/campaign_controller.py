@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Header
+from fastapi.responses import StreamingResponse
 from typing import Optional
 from core.supabase import get_user_from_token
 from models.campaign import CampaignGenerateRequest
 from models.campaign_save import CampaignSaveRequest
-from services.campaign_service import generate_campaign
+from services.campaign_service import generate_campaign_stream
 from services.campaigns_db_service import create_campaign, list_campaigns
 
 router = APIRouter(prefix="/campaign")
@@ -11,8 +12,15 @@ router = APIRouter(prefix="/campaign")
 
 @router.post("/generate")
 async def generate_campaign_images(req: CampaignGenerateRequest):
-    """Generate 4 campaign images at different angles using Gemini."""
-    return await generate_campaign(req)
+    """SSE stream — sends each generated image as a separate event."""
+    return StreamingResponse(
+        generate_campaign_stream(req),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.post("/save")

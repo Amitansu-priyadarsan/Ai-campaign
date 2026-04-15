@@ -30,15 +30,35 @@ export default function CampaignEditor({ brand }) {
   const [genError, setGenError] = useState(null)
   const didFetch = useRef(false)
 
-  const callGenerate = async (config, refinement) => {
+  const streamGenerate = async (config, onImage, onMeta) => {
     const res = await fetch(`${API_URL}/campaign/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(refinement ? { ...config, refinement } : config),
+      body: JSON.stringify(config),
     })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.detail || 'Generation failed')
-    return data
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      throw new Error(err.detail || 'Generation failed')
+    }
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split('\n\n')
+      buffer = lines.pop() || ''
+      for (const chunk of lines) {
+        const line = chunk.replace(/^data: /, '').trim()
+        if (!line) continue
+        try {
+          const evt = JSON.parse(line)
+          if (evt.type === 'metadata' && onMeta) onMeta(evt.metadata)
+          if (evt.type === 'image' && evt.image && onImage) onImage(evt.image)
+        } catch { /* skip bad json */ }
+      }
+    }
   }
 
   useEffect(() => {
@@ -53,13 +73,20 @@ export default function CampaignEditor({ brand }) {
     }
 
     const run = async () => {
+      let gotAny = false
       try {
         const config = JSON.parse(configRaw)
-        const data = await callGenerate(config)
-        const imgs = (data.images || []).filter(i => i.image).map(i => ({ id: i.id, label: i.label, image: i.image }))
-        setVariations(imgs)
-        setMetadata(data.metadata || null)
-        if (imgs.length === 0) setGenError('No images were generated. Try again.')
+        await streamGenerate(
+          config,
+          (img) => {
+            if (img.image) {
+              gotAny = true
+              setVariations(prev => [...prev, { id: img.id, label: img.label, image: img.image }])
+            }
+          },
+          (meta) => setMetadata(meta),
+        )
+        if (!gotAny) setGenError('No images were generated. Try again.')
       } catch (err) {
         setGenError(err.message)
       } finally {
@@ -75,17 +102,22 @@ export default function CampaignEditor({ brand }) {
     if (!configRaw) return
     setRegenerating(true)
     setGenError(null)
+    setVariations([])
+    setSelectedVariations(new Set())
+    let gotAny = false
     try {
       const config = JSON.parse(configRaw)
-      const data = await callGenerate(config, refinementPrompt || undefined)
-      const imgs = (data.images || []).filter(i => i.image).map(i => ({ id: i.id, label: i.label, image: i.image }))
-      if (imgs.length > 0) {
-        setVariations(imgs)
-        setSelectedVariations(new Set())
-        setMetadata(data.metadata || null)
-      } else {
-        setGenError('No images were generated. Try again.')
-      }
+      await streamGenerate(
+        refinementPrompt ? { ...config, refinement: refinementPrompt } : config,
+        (img) => {
+          if (img.image) {
+            gotAny = true
+            setVariations(prev => [...prev, { id: img.id, label: img.label, image: img.image }])
+          }
+        },
+        (meta) => setMetadata(meta),
+      )
+      if (!gotAny) setGenError('No images were generated. Try again.')
     } catch (err) {
       setGenError(err.message)
     } finally {
@@ -222,17 +254,8 @@ export default function CampaignEditor({ brand }) {
 
           {/* Variation Grid — 4 columns, all selectable */}
           <div className="grid grid-cols-4 gap-4 mb-12">
-            {(loading || (regenerating && variations.length === 0)) && PLACEHOLDERS.map(p => (
-              <div key={p.id} className="relative rounded-2xl overflow-hidden"
-                style={{ outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1, height: 358, background: '#F6F3F2' }}>
-                <div className="shimmer-block" style={{ width: '100%', height: '100%' }} />
-                <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
-                  <span style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#7F7667' }}>{p.label}</span>
-                  <Loader2 size={14} className="animate-spin" style={{ color: '#775A19' }} />
-                </div>
-              </div>
-            ))}
-            {!loading && variations.map(v => {
+            {/* Arrived images */}
+            {variations.map(v => {
               const isSelected = selectedVariations.has(v.id)
               const isHovered = hoveredVariation === v.id
               return (
@@ -278,6 +301,17 @@ export default function CampaignEditor({ brand }) {
                 </div>
               )
             })}
+            {/* Shimmer placeholders for remaining slots */}
+            {(loading || regenerating) && PLACEHOLDERS.slice(variations.length).map(p => (
+              <div key={p.id} className="relative rounded-2xl overflow-hidden"
+                style={{ outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1, height: 358, background: '#F6F3F2' }}>
+                <div className="shimmer-block" style={{ width: '100%', height: '100%' }} />
+                <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
+                  <span style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#7F7667' }}>{p.label}</span>
+                  <Loader2 size={14} className="animate-spin" style={{ color: '#775A19' }} />
+                </div>
+              </div>
+            ))}
           </div>
 
           {/* Refinement Prompt */}
