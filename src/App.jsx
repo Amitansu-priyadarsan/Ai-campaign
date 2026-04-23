@@ -6,7 +6,7 @@ import Onboarding from './pages/Onboarding'
 import Dashboard from './pages/Dashboard'
 import CampaignCreate from './pages/CampaignCreate'
 import CampaignEditor from './pages/CampaignEditor'
-import AiChat from './pages/AiChat'
+import CampaignView from './pages/CampaignView'
 import AdminLogin from './pages/AdminLogin'
 import AdminPanel from './pages/AdminPanel'
 
@@ -69,7 +69,7 @@ function App() {
         <Route path="/dashboard" element={user ? <Dashboard user={user} brand={brandConfig} onLogout={logout} /> : <Navigate to="/login" />} />
         <Route path="/campaign/create" element={user ? <CampaignCreate brand={brandConfig} /> : <Navigate to="/login" />} />
         <Route path="/campaign/editor" element={user ? <CampaignEditor brand={brandConfig} /> : <Navigate to="/login" />} />
-        <Route path="/chat" element={<AiChat />} />
+        <Route path="/campaign/view/:id" element={user ? <CampaignView /> : <Navigate to="/login" />} />
 
         {/* ── Admin routes ── */}
         <Route path="/admin/login" element={!admin ? <AdminLogin onLogin={adminLogin} /> : <Navigate to="/admin" />} />

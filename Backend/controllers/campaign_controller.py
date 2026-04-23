@@ -5,7 +5,7 @@ from core.supabase import get_user_from_token
 from models.campaign import CampaignGenerateRequest
 from models.campaign_save import CampaignSaveRequest
 from services.campaign_service import generate_campaign_stream
-from services.campaigns_db_service import create_campaign, list_campaigns
+from services.campaigns_db_service import create_campaign, list_campaigns, get_campaign
 
 router = APIRouter(prefix="/campaign")
 
@@ -44,3 +44,14 @@ async def get_campaigns(authorization: Optional[str] = Header(default=None)):
     user_id = user.get("id")
     data = await list_campaigns(user_id)
     return {"success": True, "campaigns": data}
+
+
+@campaigns_router.get("/{campaign_id}")
+async def get_campaign_detail(
+    campaign_id: str,
+    authorization: Optional[str] = Header(default=None),
+):
+    user = await get_user_from_token(authorization)
+    user_id = user.get("id")
+    data = await get_campaign(user_id, campaign_id)
+    return {"success": True, "campaign": data}

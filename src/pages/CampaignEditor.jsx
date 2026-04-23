@@ -28,9 +28,10 @@ export default function CampaignEditor({ brand }) {
   const [regenerating, setRegenerating] = useState(false)
   const [variations, setVariations] = useState([])
   const [genError, setGenError] = useState(null)
+  const [reviewId, setReviewId] = useState(null)
   const didFetch = useRef(false)
 
-  const streamGenerate = async (config, onImage, onMeta) => {
+  const streamGenerate = async (config, onImage, onMeta, onError) => {
     const res = await fetch(`${API_URL}/campaign/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -56,6 +57,7 @@ export default function CampaignEditor({ brand }) {
           const evt = JSON.parse(line)
           if (evt.type === 'metadata' && onMeta) onMeta(evt.metadata)
           if (evt.type === 'image' && evt.image && onImage) onImage(evt.image)
+          if (evt.type === 'error' && onError) onError(evt.message)
         } catch { /* skip bad json */ }
       }
     }
@@ -74,6 +76,7 @@ export default function CampaignEditor({ brand }) {
 
     const run = async () => {
       let gotAny = false
+      let serverError = null
       try {
         const config = JSON.parse(configRaw)
         await streamGenerate(
@@ -85,8 +88,9 @@ export default function CampaignEditor({ brand }) {
             }
           },
           (meta) => setMetadata(meta),
+          (msg) => { serverError = msg },
         )
-        if (!gotAny) setGenError('No images were generated. Try again.')
+        if (!gotAny) setGenError(serverError || 'No images were generated. Try again.')
       } catch (err) {
         setGenError(err.message)
       } finally {
@@ -105,6 +109,7 @@ export default function CampaignEditor({ brand }) {
     setVariations([])
     setSelectedVariations(new Set())
     let gotAny = false
+    let serverError = null
     try {
       const config = JSON.parse(configRaw)
       await streamGenerate(
@@ -116,8 +121,9 @@ export default function CampaignEditor({ brand }) {
           }
         },
         (meta) => setMetadata(meta),
+        (msg) => { serverError = msg },
       )
-      if (!gotAny) setGenError('No images were generated. Try again.')
+      if (!gotAny) setGenError(serverError || 'No images were generated. Try again.')
     } catch (err) {
       setGenError(err.message)
     } finally {
@@ -125,8 +131,11 @@ export default function CampaignEditor({ brand }) {
     }
   }
 
-  // Pick first selected variation for step 3 preview
-  const reviewVariation = variations.find(v => selectedVariations.has(v.id)) || variations[0] || null
+  // Pick review variation — user-chosen if set, else first selected, else first
+  const reviewVariation =
+    (reviewId && variations.find(v => v.id === reviewId && selectedVariations.has(v.id))) ||
+    variations.find(v => selectedVariations.has(v.id)) ||
+    variations[0] || null
 
   const toggleVariation = (id) => {
     setSelectedVariations(prev => {
@@ -138,6 +147,29 @@ export default function CampaignEditor({ brand }) {
   }
 
   const [publishing, setPublishing] = useState(false)
+
+  const downloadImage = (dataUrl, filename) => {
+    const a = document.createElement('a')
+    a.href = dataUrl
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  }
+
+  const handleExport = async () => {
+    const toExport = variations.filter(v => selectedVariations.has(v.id))
+    const list = toExport.length > 0 ? toExport : variations
+    if (list.length === 0) return
+    const base = metadata?.muse
+      ? `${metadata.muse}-${metadata.location || 'campaign'}`.replace(/\s+/g, '_').toLowerCase()
+      : 'campaign'
+    for (let i = 0; i < list.length; i++) {
+      const v = list[i]
+      downloadImage(v.image, `${base}-variation-${v.id}.png`)
+      if (i < list.length - 1) await new Promise(r => setTimeout(r, 250))
+    }
+  }
 
   const handlePublish = async () => {
     if (publishing) return
@@ -406,10 +438,14 @@ export default function CampaignEditor({ brand }) {
             <div style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 3, color: '#775A19', marginBottom: 8 }}>Final Step</div>
             <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 400, color: '#1C1B1B', lineHeight: '40px' }}>Step 3: Final Review</h1>
           </div>
-          <button className="flex items-center gap-2 px-6 py-2.5 rounded-xl cursor-pointer transition-opacity hover:opacity-80"
-            style={{ background: '#F0EDED', outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1 }}>
+          <button onClick={handleExport}
+            disabled={variations.length === 0}
+            className="flex items-center gap-2 px-6 py-2.5 rounded-xl cursor-pointer transition-opacity hover:opacity-80"
+            style={{ background: '#F0EDED', outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1, opacity: variations.length === 0 ? 0.5 : 1 }}>
             <Download size={10} style={{ color: '#4E4639' }} />
-            <span style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#4E4639' }}>Export Asset</span>
+            <span style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#4E4639' }}>
+              Export {selectedVariations.size > 0 ? `${selectedVariations.size} Asset${selectedVariations.size > 1 ? 's' : ''}` : 'All Assets'}
+            </span>
           </button>
         </div>
 
@@ -479,12 +515,14 @@ export default function CampaignEditor({ brand }) {
             {selectedVariations.size > 1 && (
               <div>
                 <div className="mb-3" style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#7F7667' }}>
-                  All Selected ({selectedVariations.size})
+                  All Selected ({selectedVariations.size}) — click to preview
                 </div>
                 <div className="flex gap-2">
                   {variations.filter(v => selectedVariations.has(v.id)).map(v => (
-                    <img key={v.id} src={v.image} alt={v.label} className="w-16 h-16 rounded-lg object-cover"
-                      style={{ outline: reviewVariation.id === v.id ? '2px solid #775A19' : '1px solid rgba(209,197,180,0.20)', outlineOffset: -1 }} />
+                    <img key={v.id} src={v.image} alt={v.label}
+                      onClick={() => setReviewId(v.id)}
+                      className="w-16 h-16 rounded-lg object-cover cursor-pointer transition-all hover:opacity-80"
+                      style={{ outline: reviewVariation && reviewVariation.id === v.id ? '2px solid #775A19' : '1px solid rgba(209,197,180,0.20)', outlineOffset: -1 }} />
                   ))}
                 </div>
               </div>

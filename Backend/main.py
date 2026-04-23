@@ -6,7 +6,6 @@ from controllers.admin_controller import router as admin_router
 from controllers.preferences_controller import router as preferences_router
 from controllers.dashboard_controller import router as dashboard_router
 from controllers.campaign_controller import router as campaign_router, campaigns_router
-from controllers.chat_controller import router as chat_router
 
 app = FastAPI()
 
@@ -29,7 +28,6 @@ app.include_router(preferences_router)
 app.include_router(dashboard_router)
 app.include_router(campaign_router)
 app.include_router(campaigns_router)
-app.include_router(chat_router)
 
 
 if __name__ == "__main__":

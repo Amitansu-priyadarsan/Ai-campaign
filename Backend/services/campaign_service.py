@@ -58,7 +58,7 @@ def _generate_one(i, angle_desc, jewelry_part, req):
     )
     try:
         response = genai_client.models.generate_content(
-            model="gemini-2.5-flash-preview",
+            model="gemini-2.5-flash-image",
             contents=[prompt, jewelry_part],
             config=genai_types.GenerateContentConfig(
                 response_modalities=["IMAGE", "TEXT"],
@@ -114,8 +114,25 @@ async def generate_campaign_stream(req):
         tasks.append(task)
 
     # Stream each result as it completes
+    errors = []
+    success = 0
     for coro in asyncio.as_completed(tasks):
         result = await coro
+        if result.get("image"):
+            success += 1
+        elif result.get("error"):
+            errors.append(result["error"])
         yield "data: %s\n\n" % json.dumps({"type": "image", "image": result})
+
+    if success == 0 and errors:
+        joined = " | ".join(errors)
+        low = joined.lower()
+        if any(k in low for k in ("quota", "resource_exhausted", "429", "billing", "rate limit", "insufficient")):
+            msg = "Your Gemini API credits/quota are exhausted. Please check your billing. (%s)" % joined
+        elif any(k in low for k in ("api key", "permission", "unauthenticated", "401", "403")):
+            msg = "Gemini API key rejected. Check GEMINI_API_KEY. (%s)" % joined
+        else:
+            msg = "Image generation failed: %s" % joined
+        yield "data: %s\n\n" % json.dumps({"type": "error", "message": msg})
 
     yield "data: %s\n\n" % json.dumps({"type": "done"})

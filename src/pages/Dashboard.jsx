@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom'
-import { Plus, Bell, Settings, LogOut, BarChart3, Compass, Megaphone, LineChart, Tv, Upload, Palette, Type, Image, Eye, TrendingUp, Calendar, Clock, Instagram, Facebook, Play, PauseCircle, FileText, Layers, MessageCircle } from 'lucide-react'
+import { Plus, Bell, Settings, LogOut, BarChart3, Compass, Megaphone, LineChart, Tv, Upload, Palette, Type, Image, Eye, TrendingUp, Calendar, Clock, Instagram, Facebook, Play, PauseCircle, FileText, Layers } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { Loader2 } from 'lucide-react'
 import Star from '../assets/Star'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
@@ -11,7 +12,6 @@ const NAV_ITEMS = [
   { icon: Megaphone, label: 'Campaigns', key: 'campaigns' },
   { icon: LineChart, label: 'Insights', key: 'insights' },
   { icon: Tv, label: 'Studio', key: 'studio' },
-  { icon: MessageCircle, label: 'AI Chat', key: 'ai-chat' },
 ]
 
 
@@ -26,6 +26,44 @@ const SectionTitle = ({ title, subtitle }) => (
     {subtitle && <div style={{ fontFamily: nimbus, fontSize: 10, fontWeight: 400, textTransform: 'uppercase', letterSpacing: 1, color: '#78716C', marginTop: 4 }}>{subtitle}</div>}
   </div>
 )
+
+/* Lazily loads a campaign's hero image so the list renders instantly */
+function CampaignCardImage({ campaignId, title }) {
+  const [image, setImage] = useState(null)
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      try {
+        const userRaw = localStorage.getItem('ai-campaign-user')
+        const user = userRaw ? JSON.parse(userRaw) : null
+        if (!user?.access_token) return
+        const res = await fetch(`${API_URL}/campaigns/${campaignId}`, {
+          headers: { Authorization: `Bearer ${user.access_token}` },
+        })
+        if (!res.ok) return
+        const data = await res.json()
+        if (!cancelled) setImage(data.campaign?.image || null)
+      } catch { /* ignore */ }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [campaignId])
+
+  if (image) {
+    return <img src={image} alt={title} className="w-full h-full object-cover" style={{ minHeight: 268 }} />
+  }
+  return (
+    <div className="w-full h-full flex flex-col items-center justify-center" style={{ minHeight: 268 }}>
+      <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-3" style={{ background: 'white', boxShadow: '0 4px 12px rgba(119,90,25,0.12)' }}>
+        <span style={{ fontFamily: serif, fontSize: 28, color: '#775A19' }}>{(title || 'C')[0].toUpperCase()}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <Loader2 size={11} className="animate-spin" style={{ color: '#775A19' }} />
+        <span style={{ fontFamily: nimbus, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: '#775A19' }}>Loading preview</span>
+      </div>
+    </div>
+  )
+}
 
 /* ─── Section: Dashboard ─── */
 function DashboardContent({ navigate, activeTab, setActiveTab, stats, analytics, campaigns }) {
@@ -101,15 +139,14 @@ function DashboardContent({ navigate, activeTab, setActiveTab, stats, analytics,
         </div>
         <div className="grid grid-cols-4 gap-5">
           {(campaigns || []).slice(0, 3).map(c => (
-            <div key={c.id} className="flex flex-col cursor-pointer group" onClick={() => navigate('/campaign/editor')}>
-              <div className="rounded overflow-hidden flex items-center justify-center" style={{ background: '#F0EDED', minHeight: 268 }}>
-                {c.image ? (
-                  <img src={c.image} alt={c.title} className="w-full h-full object-cover" style={{ minHeight: 268 }} />
-                ) : (
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(119,90,25,0.10)' }}>
-                    <Megaphone size={18} style={{ color: '#775A19' }} />
-                  </div>
-                )}
+            <div key={c.id} className="flex flex-col cursor-pointer group transition-transform hover:-translate-y-1" onClick={() => navigate(`/campaign/view/${c.id}`)}>
+              <div className="rounded overflow-hidden relative"
+                style={{
+                  background: 'linear-gradient(135deg, #F6F3F2 0%, rgba(119,90,25,0.08) 100%)',
+                  outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1,
+                  minHeight: 268,
+                }}>
+                <CampaignCardImage campaignId={c.id} title={c.title} />
               </div>
               <div className="mt-4">
                 <div style={{ fontFamily: serif, fontSize: 14, fontWeight: 400, color: '#1C1B1B', lineHeight: '20px' }}>{c.title}</div>
@@ -277,7 +314,7 @@ function CampaignsContent({ navigate, campaigns }) {
           </div>
           {/* Rows */}
           {data.map(c => (
-            <div key={c.id} onClick={() => navigate('/campaign/editor')} className="grid grid-cols-12 gap-4 px-6 py-4 items-center cursor-pointer hover:bg-stone-50 transition-colors" style={{ borderTop: '1px solid rgba(209,197,180,0.12)' }}>
+            <div key={c.id} onClick={() => navigate(`/campaign/view/${c.id}`)} className="grid grid-cols-12 gap-4 px-6 py-4 items-center cursor-pointer hover:bg-stone-50 transition-colors" style={{ borderTop: '1px solid rgba(209,197,180,0.12)' }}>
               <div className="col-span-4 flex items-center gap-3">
                 <span style={{ fontFamily: serif, fontSize: 14, color: '#1C1B1B' }}>{c.title}</span>
               </div>
@@ -454,7 +491,7 @@ export default function Dashboard({ user, brand, onLogout }) {
           </div>
           <nav className="flex flex-col gap-1 px-3">
             {NAV_ITEMS.map(item => (
-              <button key={item.key} onClick={() => item.key === 'ai-chat' ? navigate('/chat') : setActiveSection(item.key)}
+              <button key={item.key} onClick={() => setActiveSection(item.key)}
                 className="flex items-center gap-3 px-4 py-3 rounded-lg text-left w-full transition-colors cursor-pointer"
                 style={{
                   background: activeSection === item.key ? 'rgba(119,90,25,0.06)' : 'transparent',

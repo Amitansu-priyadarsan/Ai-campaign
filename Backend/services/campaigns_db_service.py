@@ -6,13 +6,28 @@ from core.supabase import supabase_rest_headers
 
 
 async def list_campaigns(user_id: str) -> list:
-    url = f"{SUPABASE_URL}/rest/v1/campaigns?user_id=eq.{user_id}&select=*&order=created_at.desc"
-    async with httpx.AsyncClient() as client:
+    # Lightweight listing: no image, no metadata (both contain huge base64 PNGs).
+    # The detail endpoint /campaigns/{id} pulls the full row on demand.
+    fields = "id,title,status,platform,impressions,conversions,created_at"
+    url = f"{SUPABASE_URL}/rest/v1/campaigns?user_id=eq.{user_id}&select={fields}&order=created_at.desc"
+    async with httpx.AsyncClient(timeout=60.0) as client:
         r = await client.get(url, headers=supabase_rest_headers())
     if r.status_code != 200:
         return []
     rows = r.json() or []
     return [_to_ui(c) for c in rows]
+
+
+async def get_campaign(user_id: str, campaign_id: str) -> dict:
+    url = f"{SUPABASE_URL}/rest/v1/campaigns?id=eq.{campaign_id}&user_id=eq.{user_id}&select=*"
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        r = await client.get(url, headers=supabase_rest_headers())
+    if r.status_code != 200:
+        raise HTTPException(status_code=502, detail="Failed to load campaign")
+    rows = r.json() or []
+    if not rows:
+        raise HTTPException(status_code=404, detail="Campaign not found")
+    return _to_ui(rows[0])
 
 
 async def create_campaign(user_id: str, payload: dict) -> dict:
@@ -26,7 +41,7 @@ async def create_campaign(user_id: str, payload: dict) -> dict:
         "metadata": payload.get("metadata") or {},
     }
     headers = {**supabase_rest_headers(), "Prefer": "return=representation"}
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=120.0) as client:
         r = await client.post(url, json=body, headers=headers)
     if r.status_code not in (200, 201):
         raise HTTPException(status_code=502, detail="Failed to create campaign: " + r.text)
