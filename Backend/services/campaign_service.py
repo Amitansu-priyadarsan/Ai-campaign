@@ -2,39 +2,71 @@ import base64
 import json
 import asyncio
 from typing import Optional, AsyncGenerator
-from fastapi import HTTPException
 from google.genai import types as genai_types
 from core.config import genai_client
 from models.campaign import CampaignGenerateRequest
 
 
-ANGLE_DESCRIPTIONS = [
-    "front-facing straight-on view, jewelry clearly visible on the model, shot at eye level",
-    "elegant 45-degree three-quarter angle from the left, showing depth and dimension of the jewelry",
-    "close-up detail shot from a slightly elevated angle, emphasizing the craftsmanship and gemstone details",
-    "profile side view from the right, capturing how the jewelry catches light from a dramatic angle",
+# 4 prompts per muse type. Each muse gets its own front / three-quarter / close-up / profile.
+PROMPTS_INDIAN_MODEL = [
+    "Front-facing straight-on beauty shot of an Indian woman model, captured at eye level, centered composition, looking directly into the camera with a calm confident expression. The jewelry is the clear focal point and is fully visible without any cropping or obstruction. Clean elegant styling, soft natural makeup, smooth skin with realistic texture, subtle pores, detailed facial features, neatly styled hair pulled back or tucked away to keep attention on the jewelry. Studio lighting with soft shadows and even illumination to highlight the shine, craftsmanship, and fine details of the jewelry. High-resolution editorial fashion photography, sharp focus on the jewelry, luxurious aesthetic, premium brand campaign feel, neutral or softly blurred background, realistic proportions, refined composition, no tilt, no side angle, no dramatic pose, no hands covering the product.",
+    "Elegant 45-degree three-quarter angle from the left, with an Indian woman model turned slightly toward the camera to create depth and dimension in the jewelry. The jewelry should remain the clear focal point, fully visible, crisp, and unobstructed, with graceful perspective that highlights its contours, craftsmanship, and shine. Eye-level framing, refined posture, soft confident expression, and a luxurious editorial beauty aesthetic. Natural-looking skin texture, polished makeup, and neatly styled hair to keep attention on the jewelry. Soft studio lighting with gentle highlights and controlled shadows to enhance the three-dimensional form of the piece. Premium fashion campaign look, high-resolution, sharp focus on the jewelry, tasteful composition, clean blurred background, realistic proportions, no harsh pose, no extreme angle, no cropping of the jewelry.",
+    "Close-up detail shot from a slightly elevated angle on an Indian woman model, tightly framed to emphasize the craftsmanship, intricate setting, and gemstone details of the jewelry. The jewelry should dominate the composition, rendered with exceptional clarity, sharp focus, and visible texture in every fine element. Soft, controlled studio lighting to bring out sparkle, reflections, metal finish, and stone brilliance without harsh glare. Premium luxury editorial aesthetic, elegant and refined, with the model's skin softly visible only as a subtle supporting element. Natural skin texture, polished makeup, and minimal distractions in the background. High-resolution product-focused fashion photography, realistic proportions, clean composition, no wide framing, no clutter, no obstructions, no cropping of the jewelry.",
+    "Profile side view from the right of an Indian woman model, captured at eye level with the model turned in a clean, elegant pose so the jewelry is prominently visible in profile. The composition should emphasize how the jewelry catches and reflects light from a dramatic angle, showcasing sparkle, shine, and dimensional detail. The jewelry remains the visual focal point, crisp and unobstructed, with refined styling that keeps attention on the piece. Soft yet directional studio lighting to create luminous highlights and subtle shadow contrast, enhancing the contours and craftsmanship. Luxurious editorial beauty photography, sharp focus, realistic skin texture, polished makeup, neatly styled hair, premium campaign aesthetic, clean blurred background, no front-facing pose, no clutter, no cropping, no distraction from the jewelry.",
 ]
 
+PROMPTS_JEWELRY_ONLY = [
+    "Front-facing straight-on product shot of the jewelry piece on a clean neutral surface, no model, no body parts, no hands. Centered composition with the jewelry fully visible and unobstructed. Soft, even studio lighting with controlled highlights to bring out metal finish, gemstone brilliance, and craftsmanship. High-resolution luxury catalog photography, sharp focus on the jewelry, premium brand aesthetic, softly blurred or seamless neutral background, realistic proportions, no tilt, no dramatic angle, no props.",
+    "Elegant 45-degree three-quarter angle product shot of the jewelry piece on a clean neutral surface, no model, no body parts, no hands. The angle creates depth and dimension, highlighting contours, settings, and craftsmanship. Soft directional studio lighting with gentle highlights and controlled shadows to reveal the three-dimensional form. High-resolution luxury catalog photography, crisp sharp focus, premium brand aesthetic, clean blurred background, realistic proportions, refined composition, no model, no clutter.",
+    "Macro close-up product shot of the jewelry piece on a clean neutral surface, no model, no body parts, no hands. Tightly framed to emphasize craftsmanship, intricate setting, gemstone facets, and metalwork texture. Exceptional clarity and sharp focus with visible texture in every fine element. Soft, controlled studio lighting to bring out sparkle, reflections, and stone brilliance without harsh glare. Premium luxury catalog aesthetic, minimal distractions, high-resolution product photography, no wide framing, no clutter.",
+    "Profile side product shot of the jewelry piece on a clean neutral surface, no model, no body parts, no hands. Captured at eye level so the jewelry is prominently visible in profile, emphasizing how it catches and reflects light from a dramatic angle. Soft yet directional studio lighting creates luminous highlights and subtle shadow contrast, enhancing the contours and craftsmanship. The jewelry remains the visual focal point, crisp and unobstructed. High-resolution luxury catalog photography, premium brand aesthetic, clean blurred background, sharp focus, no front-facing angle, no clutter.",
+]
 
-def build_generation_prompt(angle_desc, muse_label, draping, location, draping_physics):
-    # type: (str, str, str, str, int) -> str
-    physics_style = "flowing and loose traditional drape" if draping_physics > 50 else "structured and modern fitted drape"
+PROMPTS_HAND = [
+    "Front-facing close-up of a graceful woman's hand wearing the jewelry (ring or bracelet), captured at eye level, centered composition. The jewelry is the clear focal point and is fully visible without any cropping or obstruction. Elegant, relaxed hand pose with smooth realistic skin texture, well-groomed nails, and neutral manicure that does not distract from the piece. Soft studio lighting with even illumination to highlight the shine, gemstone facets, and craftsmanship of the jewelry. High-resolution editorial product photography, sharp focus on the jewelry, luxurious aesthetic, premium brand campaign feel, neutral or softly blurred background, realistic proportions.",
+    "Elegant 45-degree three-quarter angle close-up of a woman's hand wearing the jewelry (ring or bracelet), with the hand turned slightly to create depth and dimension. The jewelry should remain the clear focal point, fully visible, crisp, and unobstructed, with graceful perspective that highlights its contours and craftsmanship. Refined hand pose, smooth natural skin texture, neutral manicure. Soft studio lighting with gentle highlights and controlled shadows to enhance the three-dimensional form. Premium editorial product photography, high-resolution, sharp focus, clean blurred background, realistic proportions, no awkward pose, no cropping of the jewelry.",
+    "Macro close-up of a woman's hand wearing the jewelry (ring or bracelet), tightly framed to emphasize craftsmanship, intricate setting, and gemstone details. The jewelry dominates the composition with exceptional clarity, sharp focus, and visible texture in every fine element. Soft, controlled studio lighting to bring out sparkle, reflections, metal finish, and stone brilliance without harsh glare. Skin appears as a subtle supporting element with realistic texture. Premium luxury editorial aesthetic, minimal distractions, high-resolution product photography, no wide framing, no clutter.",
+    "Profile side close-up of a woman's hand wearing the jewelry (ring or bracelet), captured at eye level with the hand in a clean elegant pose so the jewelry is prominently visible in profile. The composition emphasizes how the jewelry catches and reflects light from a dramatic angle, showcasing sparkle, shine, and dimensional detail. Soft directional studio lighting creates luminous highlights and subtle shadow contrast. High-resolution editorial product photography, sharp focus on the jewelry, refined hand pose, neutral manicure, clean blurred background, premium campaign aesthetic, no front-facing angle, no cropping.",
+]
+
+PROMPTS_NECK = [
+    "Front-facing straight-on close-up of a woman's neck and décolletage wearing the jewelry (necklace or earrings), captured at eye level, centered composition. The jewelry is the clear focal point and is fully visible without any cropping or obstruction. Smooth realistic skin texture, soft natural makeup, neatly styled hair pulled back or tucked away to keep attention on the jewelry. Soft studio lighting with even illumination to highlight the shine, gemstone facets, and craftsmanship of the piece. High-resolution editorial fashion photography, sharp focus on the jewelry, luxurious aesthetic, premium brand campaign feel, neutral or softly blurred background, realistic proportions.",
+    "Elegant 45-degree three-quarter angle close-up of a woman's neck and décolletage wearing the jewelry (necklace or earrings), with the model turned slightly to create depth and dimension. The jewelry should remain the clear focal point, fully visible, crisp, and unobstructed, with graceful perspective that highlights its contours and craftsmanship. Refined posture, natural skin texture, polished makeup, neat hair. Soft studio lighting with gentle highlights and controlled shadows to enhance the three-dimensional form. Premium editorial fashion photography, high-resolution, sharp focus, clean blurred background, realistic proportions, no awkward pose, no cropping.",
+    "Macro close-up of a woman's neckline wearing the jewelry (necklace or earrings), tightly framed to emphasize craftsmanship, intricate setting, and gemstone details. The jewelry dominates the composition with exceptional clarity, sharp focus, and visible texture in every fine element. Soft, controlled studio lighting brings out sparkle, reflections, metal finish, and stone brilliance without harsh glare. Skin appears as a subtle supporting element with realistic texture and soft makeup. Premium luxury editorial aesthetic, minimal distractions, high-resolution fashion photography, no wide framing, no clutter.",
+    "Profile side close-up of a woman's neck and ear wearing the jewelry (necklace or earrings), captured at eye level with the model turned in a clean elegant pose so the jewelry is prominently visible in profile. The composition emphasizes how the jewelry catches and reflects light from a dramatic angle, showcasing sparkle, shine, and dimensional detail. Soft directional studio lighting creates luminous highlights and subtle shadow contrast. High-resolution editorial fashion photography, sharp focus on the jewelry, neat hair, polished makeup, clean blurred background, premium campaign aesthetic, no front-facing angle, no cropping.",
+]
+
+MUSE_PROMPT_SETS = {
+    "indian_model": PROMPTS_INDIAN_MODEL,
+    "jewelry_only": PROMPTS_JEWELRY_ONLY,
+    "hand": PROMPTS_HAND,
+    "neck": PROMPTS_NECK,
+    "custom": PROMPTS_INDIAN_MODEL,  # custom uses model prompts + uploaded reference image
+}
+
+ANGLE_LABELS = ["Front", "Three-Quarter", "Close-Up", "Profile"]
+
+
+def _physics_phrase(draping_physics):
+    return "flowing and loose traditional drape" if draping_physics > 50 else "structured and modern fitted drape"
+
+
+def build_generation_prompt(angle_prompt, muse_type, draping, location, draping_physics):
+    """Compose the angle-specific prompt with optional draping/location context.
+
+    For muses where a model is present (indian_model, neck, custom) we add saree + location.
+    For jewelry_only and hand we keep the prompt clean — those scenes don't need attire.
+    """
+    if muse_type in ("jewelry_only", "hand"):
+        return angle_prompt
     return (
-        f"Generate a photorealistic high-fashion jewelry campaign image. "
-        f"The model ({muse_label}) is wearing the uploaded jewelry piece prominently. "
-        f"She is dressed in a {draping} saree/fabric with a {physics_style}. "
-        f"The setting is a luxurious {location} backdrop with cinematic lighting. "
-        f"Camera angle: {angle_desc}. "
-        f"The jewelry must be the hero element — sharply in focus, catching light beautifully. "
-        f"Style: editorial high-fashion photography, 8K quality, rich colors, "
-        f"shallow depth of field on the background, professional studio-grade output. "
-        f"The image should look like it belongs in Vogue or a premium jewelry brand campaign."
+        f"{angle_prompt} "
+        f"The model is dressed in a {draping} saree/fabric with a {_physics_phrase(draping_physics)}. "
+        f"The setting evokes a luxurious {location} backdrop, kept softly blurred so the jewelry remains the hero."
     )
 
 
 def _extract_image_b64(response):
-    # type: (...) -> Optional[str]
-    """Pull the first inline image out of a gemini image-gen response."""
     if not response or not response.candidates:
         return None
     for cand in response.candidates:
@@ -49,17 +81,16 @@ def _extract_image_b64(response):
     return None
 
 
-def _generate_one(i, angle_desc, jewelry_part, req):
-    # type: (int, str, ..., CampaignGenerateRequest) -> dict
-    """Synchronous call — will be run via asyncio.to_thread."""
+def _generate_one(i, angle_prompt, content_parts, req):
     prompt = build_generation_prompt(
-        angle_desc, req.muse_label, req.draping,
-        req.location, req.draping_physics
+        angle_prompt, req.muse_type, req.draping, req.location, req.draping_physics
     )
+    full_contents = [prompt] + content_parts
+    angle_label = ANGLE_LABELS[i] if i < len(ANGLE_LABELS) else f"Angle {i+1}"
     try:
         response = genai_client.models.generate_content(
             model="gemini-2.5-flash-image",
-            contents=[prompt, jewelry_part],
+            contents=full_contents,
             config=genai_types.GenerateContentConfig(
                 response_modalities=["IMAGE", "TEXT"],
             ),
@@ -69,13 +100,13 @@ def _generate_one(i, angle_desc, jewelry_part, req):
             return {
                 "id": chr(65 + i),
                 "label": "Variation %s" % chr(65 + i),
-                "angle": angle_desc,
+                "angle": angle_label,
                 "image": "data:image/png;base64,%s" % img_b64,
             }
         return {
             "id": chr(65 + i),
             "label": "Variation %s" % chr(65 + i),
-            "angle": angle_desc,
+            "angle": angle_label,
             "image": None,
             "error": "No image returned for this angle",
         }
@@ -83,7 +114,7 @@ def _generate_one(i, angle_desc, jewelry_part, req):
         return {
             "id": chr(65 + i),
             "label": "Variation %s" % chr(65 + i),
-            "angle": angle_desc,
+            "angle": angle_label,
             "image": None,
             "error": str(err),
         }
@@ -95,25 +126,34 @@ async def generate_campaign_stream(req):
     image_bytes = base64.b64decode(req.jewelry_image)
     jewelry_part = genai_types.Part.from_bytes(data=image_bytes, mime_type="image/png")
 
+    content_parts = [jewelry_part]
+    if req.muse_type == "custom" and req.custom_muse_image:
+        try:
+            muse_bytes = base64.b64decode(req.custom_muse_image)
+            muse_part = genai_types.Part.from_bytes(data=muse_bytes, mime_type="image/png")
+            content_parts.append(muse_part)
+        except Exception:
+            pass  # if the custom upload is malformed, just fall back to the angle prompt
+
+    prompts = MUSE_PROMPT_SETS.get(req.muse_type, PROMPTS_INDIAN_MODEL)
+
     metadata = {
         "muse": req.muse_label,
+        "muse_type": req.muse_type,
         "draping": req.draping,
         "location": req.location,
         "draping_physics": req.draping_physics,
     }
 
-    # Send metadata first
     yield "data: %s\n\n" % json.dumps({"type": "metadata", "metadata": metadata})
 
-    # Fire all 4 in parallel using asyncio tasks
     tasks = []
-    for i, angle_desc in enumerate(ANGLE_DESCRIPTIONS):
+    for i, angle_prompt in enumerate(prompts):
         task = asyncio.get_event_loop().run_in_executor(
-            None, _generate_one, i, angle_desc, jewelry_part, req
+            None, _generate_one, i, angle_prompt, content_parts, req
         )
         tasks.append(task)
 
-    # Stream each result as it completes
     errors = []
     success = 0
     for coro in asyncio.as_completed(tasks):

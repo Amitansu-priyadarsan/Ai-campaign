@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, Upload, X, ChevronDown, ArrowRight, Monitor, Loader2 } from 'lucide-react'
+import { ArrowLeft, Upload, X, ChevronDown, ArrowRight, Monitor, Loader2, Plus, Trash2 } from 'lucide-react'
 import Star from '../assets/Star'
+import CustomAssetModal from '../components/CustomAssetModal'
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
@@ -9,10 +10,12 @@ const serif = "'Noto Serif', serif"
 const sans = 'Manrope, sans-serif'
 const nimbus = "'Nimbus Sans', Manrope, sans-serif"
 
+// Muse = subject type. Each value drives a different prompt set on the backend.
 const MUSE_OPTIONS = [
-  { id: 1, label: 'Muse 1', image: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=300&h=400&fit=crop', selected: true },
-  { id: 2, label: 'Muse 2', image: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=400&fit=crop' },
-  { id: 3, label: 'Muse 3', image: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=400&fit=crop' },
+  { type: 'indian_model', label: 'Indian Model', desc: 'Full beauty shot', image: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=400&fit=crop' },
+  { type: 'jewelry_only', label: 'Jewelry Only', desc: 'Pure product, no model', image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=300&h=400&fit=crop' },
+  { type: 'hand', label: 'Hand', desc: 'Rings & bracelets', image: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=300&h=400&fit=crop' },
+  { type: 'neck', label: 'Neck', desc: 'Necklaces & earrings', image: 'https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=300&h=400&fit=crop' },
 ]
 
 const DRAPING_OPTIONS = [
@@ -28,13 +31,76 @@ export default function CampaignCreate({ brand }) {
   const navigate = useNavigate()
   const fileInputRef = useRef(null)
   const [uploadedImage, setUploadedImage] = useState(null)
-  const [selectedMuse, setSelectedMuse] = useState(1)
+  const [selectedMuse, setSelectedMuse] = useState('indian_model')
+  const [selectedCustomMuseId, setSelectedCustomMuseId] = useState(null)
   const [selectedDraping, setSelectedDraping] = useState('Kanjeevaram Silk (Crimson Gold)')
   const [selectedLocation, setSelectedLocation] = useState('Palace Courtyard')
+  const [drapingPhysicsEnabled, setDrapingPhysicsEnabled] = useState(false)
   const [drapingPhysics, setDrapingPhysics] = useState(65)
   const [showDrapingDropdown, setShowDrapingDropdown] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [genError, setGenError] = useState(null)
+
+  // Custom assets fetched from backend
+  const [customMuses, setCustomMuses] = useState([])
+  const [customDrapings, setCustomDrapings] = useState([])
+  const [customLocations, setCustomLocations] = useState([])
+  const [modal, setModal] = useState(null) // 'muses' | 'drapings' | 'locations' | null
+
+  const getToken = () => {
+    try {
+      const raw = localStorage.getItem('ai-campaign-user')
+      return raw ? JSON.parse(raw)?.access_token : null
+    } catch { return null }
+  }
+
+  const fetchCustom = async (kind, setter) => {
+    const token = getToken()
+    if (!token) return
+    try {
+      const r = await fetch(`${API_URL}/custom/${kind}`, { headers: { Authorization: `Bearer ${token}` } })
+      const data = await r.json()
+      if (data?.success) setter(data.items || [])
+    } catch {}
+  }
+
+  useEffect(() => {
+    fetchCustom('muses', setCustomMuses)
+    fetchCustom('drapings', setCustomDrapings)
+    fetchCustom('locations', setCustomLocations)
+  }, [])
+
+  const saveCustom = async (kind, payload) => {
+    const token = getToken()
+    if (!token) throw new Error('Not signed in.')
+    const r = await fetch(`${API_URL}/custom/${kind}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    })
+    const data = await r.json()
+    if (!r.ok || !data?.success) throw new Error(data?.detail || 'Save failed.')
+    if (kind === 'muses') setCustomMuses(prev => [data.item, ...prev])
+    else if (kind === 'drapings') setCustomDrapings(prev => [data.item, ...prev])
+    else if (kind === 'locations') setCustomLocations(prev => [data.item, ...prev])
+  }
+
+  const deleteCustom = async (kind, id) => {
+    const token = getToken()
+    if (!token) return
+    await fetch(`${API_URL}/custom/${kind}/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (kind === 'muses') {
+      setCustomMuses(prev => prev.filter(m => m.id !== id))
+      if (selectedCustomMuseId === id) { setSelectedCustomMuseId(null); setSelectedMuse('indian_model') }
+    } else if (kind === 'drapings') {
+      setCustomDrapings(prev => prev.filter(m => m.id !== id))
+    } else if (kind === 'locations') {
+      setCustomLocations(prev => prev.filter(m => m.id !== id))
+    }
+  }
 
   const handleFileUpload = (e) => {
     const file = e.target.files?.[0]
@@ -55,22 +121,35 @@ export default function CampaignCreate({ brand }) {
     })
   }
 
+  const dataUrlToBase64 = (dataUrl) => (dataUrl || '').split(',')[1] || null
+
   const handleGenerate = async () => {
     if (!uploadedImage) return
+    if (selectedMuse === 'custom' && !selectedCustomMuseId) {
+      setGenError('Please pick a saved custom muse or choose a built-in one.')
+      return
+    }
     setGenerating(true)
     setGenError(null)
     try {
       const base64Image = await fileToBase64(uploadedImage.file)
-      const selectedMuseObj = MUSE_OPTIONS.find(m => m.id === selectedMuse)
+      const selectedMuseObj = MUSE_OPTIONS.find(m => m.type === selectedMuse)
+      let customMuseB64 = null
+      let customLabel = null
+      if (selectedMuse === 'custom' && selectedCustomMuseId) {
+        const cm = customMuses.find(m => m.id === selectedCustomMuseId)
+        customMuseB64 = dataUrlToBase64(cm?.image)
+        customLabel = cm?.label || 'Custom Muse'
+      }
       const payload = {
         jewelry_image: base64Image,
-        muse_id: selectedMuse,
-        muse_label: selectedMuseObj?.label || `Muse ${selectedMuse}`,
+        muse_type: selectedMuse,
+        muse_label: selectedMuse === 'custom' ? (customLabel || 'Custom Muse') : (selectedMuseObj?.label || 'Indian Model'),
+        custom_muse_image: customMuseB64,
         draping: selectedDraping,
         location: selectedLocation,
-        draping_physics: Number(drapingPhysics),
+        draping_physics: drapingPhysicsEnabled ? Number(drapingPhysics) : 50,
       }
-      // Store config so the editor can call the backend and show shimmer while loading
       sessionStorage.setItem('campaign-config', JSON.stringify(payload))
       navigate('/campaign/editor')
     } catch (err) {
@@ -172,23 +251,62 @@ export default function CampaignCreate({ brand }) {
           <div className="pl-4 flex flex-col gap-8">
             {/* Muse Selection */}
             <div className="p-8 rounded-3xl" style={{ background: 'white', outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1 }}>
-              <div className="mb-6" style={{ fontFamily: serif, fontSize: 24, fontWeight: 400, color: '#1C1B1B', lineHeight: '32px' }}>2. Muse Selection</div>
-              <div className="flex gap-4">
-                {MUSE_OPTIONS.map(muse => (
-                  <div key={muse.id} onClick={() => setSelectedMuse(muse.id)}
-                    className="rounded-lg overflow-hidden cursor-pointer transition-all"
-                    style={{ outline: selectedMuse === muse.id ? '2px solid #775A19' : '2px solid transparent', outlineOffset: -2 }}>
-                    <div className="relative">
-                      <img src={muse.image} alt={muse.label} className="w-[140px] h-[188px] object-cover" style={{ filter: selectedMuse === muse.id ? 'none' : 'saturate(0.3)' }} />
-                      {selectedMuse === muse.id && <div className="absolute inset-0" style={{ background: 'rgba(119,90,25,0.10)' }} />}
+              <div className="mb-2" style={{ fontFamily: serif, fontSize: 24, fontWeight: 400, color: '#1C1B1B', lineHeight: '32px' }}>2. Muse Selection</div>
+              <div className="mb-6" style={{ fontFamily: sans, fontSize: 12, fontWeight: 400, color: '#7F7667' }}>
+                Choose the subject of the shot. The 4 angle variations (front, three-quarter, close-up, profile) are generated automatically.
+              </div>
+              <div className="grid grid-cols-5 gap-3">
+                {MUSE_OPTIONS.map(muse => {
+                  const active = selectedMuse === muse.type
+                  return (
+                    <div key={muse.type} onClick={() => { setSelectedMuse(muse.type); setSelectedCustomMuseId(null) }}
+                      className="rounded-lg overflow-hidden cursor-pointer transition-all flex flex-col"
+                      style={{
+                        outline: active ? '2px solid #775A19' : '1px solid rgba(209,197,180,0.30)',
+                        outlineOffset: -1,
+                        background: 'white',
+                      }}>
+                      <div className="relative" style={{ height: 140 }}>
+                        <img src={muse.image} alt={muse.label} className="w-full h-full object-cover" style={{ filter: active ? 'none' : 'saturate(0.4)' }} />
+                        {active && <div className="absolute inset-0" style={{ background: 'rgba(119,90,25,0.10)' }} />}
+                      </div>
+                      <div className="p-2" style={{ background: active ? 'rgba(119,90,25,0.08)' : '#F6F3F2' }}>
+                        <div style={{ fontFamily: sans, fontSize: 12, fontWeight: 700, color: active ? '#775A19' : '#1C1B1B', textAlign: 'center' }}>{muse.label}</div>
+                        <div style={{ fontFamily: sans, fontSize: 9, fontWeight: 400, color: '#7F7667', textAlign: 'center', marginTop: 2 }}>{muse.desc}</div>
+                      </div>
                     </div>
-                  </div>
-                ))}
-                {/* Custom Upload */}
-                <div className="flex flex-col items-center justify-center rounded-lg cursor-pointer transition-colors hover:bg-stone-100"
-                  style={{ width: 140, outline: '2px dashed rgba(209,197,180,0.30)', outlineOffset: -2 }}>
-                  <div className="text-xl" style={{ color: '#D1C5B4' }}>+</div>
-                  <div className="mt-1" style={{ fontFamily: sans, fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: '#D1C5B4' }}>Custom</div>
+                  )
+                })}
+                {/* User-saved custom muses */}
+                {customMuses.map(cm => {
+                  const active = selectedMuse === 'custom' && selectedCustomMuseId === cm.id
+                  return (
+                    <div key={cm.id} onClick={() => { setSelectedMuse('custom'); setSelectedCustomMuseId(cm.id) }}
+                      className="rounded-lg overflow-hidden cursor-pointer transition-all flex flex-col relative group"
+                      style={{ outline: active ? '2px solid #775A19' : '1px solid rgba(209,197,180,0.30)', outlineOffset: -1, background: 'white' }}>
+                      <div className="relative" style={{ height: 140, background: '#F6F3F2' }}>
+                        {cm.image ? <img src={cm.image} alt={cm.label} className="w-full h-full object-cover" style={{ filter: active ? 'none' : 'saturate(0.5)' }} />
+                          : <div className="w-full h-full flex items-center justify-center" style={{ fontFamily: sans, fontSize: 11, color: '#A89A85' }}>No image</div>}
+                        <button onClick={(e) => { e.stopPropagation(); deleteCustom('muses', cm.id) }}
+                          className="absolute top-1 right-1 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+                          style={{ background: 'rgba(28,27,27,0.7)' }}>
+                          <Trash2 size={12} style={{ color: 'white' }} />
+                        </button>
+                      </div>
+                      <div className="p-2" style={{ background: active ? 'rgba(119,90,25,0.08)' : '#F6F3F2' }}>
+                        <div style={{ fontFamily: sans, fontSize: 12, fontWeight: 700, color: active ? '#775A19' : '#1C1B1B', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cm.label}</div>
+                        <div style={{ fontFamily: sans, fontSize: 9, fontWeight: 400, color: '#7F7667', textAlign: 'center', marginTop: 2 }}>Custom</div>
+                      </div>
+                    </div>
+                  )
+                })}
+                {/* + Add Custom Muse */}
+                <div onClick={() => setModal('muses')}
+                  className="rounded-lg cursor-pointer transition-colors hover:bg-stone-100 overflow-hidden flex flex-col items-center justify-center"
+                  style={{ outline: '2px dashed rgba(209,197,180,0.40)', outlineOffset: -2, minHeight: 180 }}>
+                  <Plus size={22} style={{ color: '#D1C5B4' }} />
+                  <div className="mt-2" style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: '#7F7667', textAlign: 'center' }}>Add Custom</div>
+                  <div style={{ fontFamily: sans, fontSize: 9, color: '#A89A85', textAlign: 'center', marginTop: 2 }}>Save your own muse</div>
                 </div>
               </div>
             </div>
@@ -219,22 +337,48 @@ export default function CampaignCreate({ brand }) {
                               {opt}
                             </button>
                           ))}
+                          {customDrapings.map(cd => (
+                            <div key={cd.id} className="flex items-center justify-between hover:bg-stone-50 transition-colors"
+                              style={{ borderTop: customDrapings[0]?.id === cd.id ? '1px solid rgba(209,197,180,0.30)' : 'none' }}>
+                              <button onClick={() => { setSelectedDraping(cd.label); setShowDrapingDropdown(false) }}
+                                className="flex-1 text-left px-5 py-3 cursor-pointer"
+                                style={{ fontFamily: sans, fontSize: 13, color: selectedDraping === cd.label ? '#775A19' : '#1C1B1B', fontWeight: selectedDraping === cd.label ? 600 : 400 }}>
+                                {cd.label}
+                              </button>
+                              <button onClick={() => deleteCustom('drapings', cd.id)} className="px-3 cursor-pointer" style={{ color: '#A89A85' }}>
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          ))}
+                          <button onClick={() => { setShowDrapingDropdown(false); setModal('drapings') }}
+                            className="w-full text-left px-5 py-3 cursor-pointer hover:bg-stone-50 transition-colors flex items-center gap-2"
+                            style={{ fontFamily: sans, fontSize: 13, color: '#775A19', fontWeight: 600, borderTop: '1px solid rgba(209,197,180,0.30)' }}>
+                            <Plus size={14} /> Add Custom Draping
+                          </button>
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Draping Physics */}
+                  {/* Draping Physics — optional */}
                   <div className="p-4 rounded-lg" style={{ background: '#FCF9F8', outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1 }}>
-                    <div className="mb-2" style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#7F7667' }}>Draping Physics</div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 relative h-2 rounded-full" style={{ background: 'white' }}>
-                        <input type="range" min="0" max="100" value={drapingPhysics} onChange={e => setDrapingPhysics(e.target.value)}
-                          className="absolute inset-0 w-full opacity-0 cursor-pointer" style={{ height: '100%' }} />
-                        <div className="absolute top-0 left-0 h-full rounded-full" style={{ width: `${drapingPhysics}%`, background: '#775A19' }} />
+                    <label className="flex items-center gap-2 cursor-pointer mb-2">
+                      <input type="checkbox" checked={drapingPhysicsEnabled} onChange={e => setDrapingPhysicsEnabled(e.target.checked)}
+                        style={{ accentColor: '#775A19' }} />
+                      <span style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#7F7667' }}>
+                        Draping Physics (optional)
+                      </span>
+                    </label>
+                    {drapingPhysicsEnabled && (
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 relative h-2 rounded-full" style={{ background: 'white' }}>
+                          <input type="range" min="0" max="100" value={drapingPhysics} onChange={e => setDrapingPhysics(e.target.value)}
+                            className="absolute inset-0 w-full opacity-0 cursor-pointer" style={{ height: '100%' }} />
+                          <div className="absolute top-0 left-0 h-full rounded-full" style={{ width: `${drapingPhysics}%`, background: '#775A19' }} />
+                        </div>
+                        <span style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, color: '#5F5E5E' }}>{drapingPhysics > 50 ? 'Traditional' : 'Modern'}</span>
                       </div>
-                      <span style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, color: '#5F5E5E' }}>Traditional</span>
-                    </div>
+                    )}
                   </div>
                 </div>
 
@@ -254,6 +398,33 @@ export default function CampaignCreate({ brand }) {
                         {loc}
                       </button>
                     ))}
+                    {customLocations.map(cl => {
+                      const active = selectedLocation === cl.label
+                      return (
+                        <div key={cl.id} className="relative group">
+                          <button onClick={() => setSelectedLocation(cl.label)}
+                            className="px-4 py-3 rounded-lg cursor-pointer transition-all pr-7"
+                            style={{
+                              background: active ? '#775A19' : '#F0EDED',
+                              color: active ? 'white' : '#4E4639',
+                              fontFamily: sans, fontSize: 12, fontWeight: 600,
+                              boxShadow: active ? '0px 4px 6px -4px rgba(119,90,25,0.20), 0px 10px 15px -3px rgba(119,90,25,0.20)' : 'none',
+                            }}>
+                            {cl.label}
+                          </button>
+                          <button onClick={() => deleteCustom('locations', cl.id)}
+                            className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 cursor-pointer opacity-0 group-hover:opacity-100"
+                            style={{ color: active ? 'white' : '#A89A85' }}>
+                            <X size={11} />
+                          </button>
+                        </div>
+                      )
+                    })}
+                    <button onClick={() => setModal('locations')}
+                      className="px-4 py-3 rounded-lg cursor-pointer transition-all flex items-center gap-1"
+                      style={{ background: 'transparent', outline: '2px dashed rgba(209,197,180,0.40)', outlineOffset: -2, color: '#775A19', fontFamily: sans, fontSize: 12, fontWeight: 600 }}>
+                      <Plus size={12} /> Add Custom
+                    </button>
                   </div>
                 </div>
               </div>
@@ -313,6 +484,21 @@ export default function CampaignCreate({ brand }) {
           </div>
         </div>
       </div>
+
+      <CustomAssetModal
+        open={!!modal}
+        title={
+          modal === 'muses' ? 'Add Custom Muse' :
+          modal === 'drapings' ? 'Add Custom Draping' :
+          modal === 'locations' ? 'Add Custom Location' : ''
+        }
+        showImage={modal === 'muses'}
+        imageRequired={modal === 'muses'}
+        onClose={() => setModal(null)}
+        onSave={async ({ label, image }) => {
+          await saveCustom(modal, { label, image })
+        }}
+      />
     </div>
   )
 }
