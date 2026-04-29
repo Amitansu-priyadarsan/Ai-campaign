@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Plus, Bell, Settings, LogOut, BarChart3, Compass, Megaphone, LineChart, Tv, Upload, Palette, Type, Image, Eye, TrendingUp, Calendar, Clock, Instagram, Facebook, Play, PauseCircle, FileText, Layers } from 'lucide-react'
+import { Plus, Bell, Settings, LogOut, BarChart3, Compass, Megaphone, LineChart, Tv, Upload, Palette, Type, Image, Eye, TrendingUp, Calendar, Clock, Instagram, Facebook, Play, PauseCircle, FileText, Layers, Menu, X } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import Star from '../assets/Star'
@@ -69,9 +69,9 @@ function CampaignCardImage({ campaignId, title }) {
 function DashboardContent({ navigate, activeTab, setActiveTab, stats, analytics, campaigns }) {
   return (
     <>
-      <div className="flex gap-6 mb-10">
+      <div className="flex flex-col lg:flex-row gap-6 mb-10">
         {/* Analytics Overview */}
-        <div className="flex-1 min-h-[400px] p-8 rounded-lg flex flex-col justify-between" style={{ background: '#F6F3F2' }}>
+        <div className="flex-1 min-h-[400px] p-5 sm:p-8 rounded-lg flex flex-col justify-between" style={{ background: '#F6F3F2' }}>
           <div>
             <div className="flex items-start justify-between pb-8">
               <div>
@@ -113,8 +113,24 @@ function DashboardContent({ navigate, activeTab, setActiveTab, stats, analytics,
           </div>
         </div>
 
-        {/* AI Promo Card */}
-        <div className="w-[300px] shrink-0 p-8 rounded-lg relative overflow-hidden flex flex-col justify-center" style={{ background: '#775A19' }}>
+        {/* AI Promo Card — Mobile (compact banner) */}
+        <div className="lg:hidden p-5 rounded-lg relative overflow-hidden flex items-center gap-4" style={{ background: '#775A19' }}>
+          <div style={{ width: 120, height: 120, position: 'absolute', right: -30, bottom: -30, background: 'rgba(255,255,255,0.10)', borderRadius: 12, filter: 'blur(28px)' }} />
+          <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center relative z-10" style={{ background: 'rgba(255,255,255,0.15)' }}>
+            <Star />
+          </div>
+          <div className="flex-1 min-w-0 relative z-10">
+            <div style={{ fontFamily: serif, fontSize: 16, fontWeight: 400, color: 'white', lineHeight: '20px' }}>Create with AI-driven aesthetics</div>
+            <div className="mt-1" style={{ fontFamily: sans, fontSize: 11, fontWeight: 300, color: 'rgba(255,255,255,0.70)', lineHeight: '16px' }}>Generate bespoke campaign visuals.</div>
+          </div>
+          <button onClick={() => navigate('/campaign/create')} className="shrink-0 px-4 py-2.5 rounded-lg cursor-pointer relative z-10"
+            style={{ background: 'white', fontFamily: nimbus, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.8, color: '#775A19' }}>
+            Start
+          </button>
+        </div>
+
+        {/* AI Promo Card — Desktop */}
+        <div className="hidden lg:flex w-[300px] shrink-0 p-8 rounded-lg relative overflow-hidden flex-col justify-center" style={{ background: '#775A19' }}>
           <div style={{ width: 192, height: 192, position: 'absolute', left: 144, top: 249, background: 'rgba(255,255,255,0.10)', borderRadius: 12, filter: 'blur(32px)' }} />
           <div className="relative z-10 flex flex-col">
             <div className="pb-6"><Star /></div>
@@ -137,7 +153,7 @@ function DashboardContent({ navigate, activeTab, setActiveTab, stats, analytics,
         <div className="flex items-center justify-between mb-8">
           <SectionTitle title="Recent Campaigns" subtitle="Your campaign assets" />
         </div>
-        <div className="grid grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {(campaigns || []).slice(0, 3).map(c => (
             <div key={c.id} className="flex flex-col cursor-pointer group transition-transform hover:-translate-y-1" onClick={() => navigate(`/campaign/view/${c.id}`)}>
               <div className="rounded overflow-hidden relative"
@@ -180,7 +196,7 @@ function BrandIdentityContent({ brand }) {
     <>
       <SectionTitle title="Brand Identity" subtitle="Your visual DNA" />
 
-      <div className="grid grid-cols-2 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Logo & Name */}
         <div className="p-8 rounded-lg" style={{ background: '#F6F3F2' }}>
           <div className="flex items-center gap-3 mb-6">
@@ -227,7 +243,7 @@ function BrandIdentityContent({ brand }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Color Palette */}
         <div className="p-8 rounded-lg" style={{ background: '#F6F3F2' }}>
           <div className="flex items-center gap-3 mb-6">
@@ -303,7 +319,8 @@ function CampaignsContent({ navigate, campaigns }) {
           </button>
         </div>
       ) : (
-        <div className="rounded-lg overflow-hidden" style={{ border: '1px solid rgba(209,197,180,0.20)' }}>
+        <div className="rounded-lg overflow-x-auto" style={{ border: '1px solid rgba(209,197,180,0.20)' }}>
+         <div style={{ minWidth: 720 }}>
           {/* Header */}
           <div className="grid grid-cols-12 gap-4 px-6 py-3" style={{ background: '#F6F3F2' }}>
             {['Campaign', 'Status', 'Platform', 'Date', 'Impressions', 'Conversions'].map((h, i) => (
@@ -328,6 +345,7 @@ function CampaignsContent({ navigate, campaigns }) {
               <div className="col-span-1" style={{ fontFamily: sans, fontSize: 12, color: c.conversions && c.conversions !== '—' ? '#775A19' : '#78716C', fontWeight: 500 }}>{c.conversions || '—'}</div>
             </div>
           ))}
+         </div>
         </div>
       )}
     </>
@@ -348,7 +366,7 @@ function InsightsContent({ stats }) {
       <SectionTitle title="Insights" subtitle="Performance analytics & trends" />
 
       {/* Top Metrics */}
-      <div className="grid grid-cols-4 gap-5 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-8">
         {topMetrics.map(m => (
           <div key={m.label} className="p-6 rounded-lg" style={{ background: '#F6F3F2' }}>
             <div style={{ fontFamily: nimbus, fontSize: 9, fontWeight: 400, textTransform: 'uppercase', letterSpacing: 0.9, color: '#78716C' }}>{m.label}</div>
@@ -371,7 +389,7 @@ function InsightsContent({ stats }) {
       </div>
 
       {/* Trend Summary */}
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="p-8 rounded-lg" style={{ background: '#F6F3F2' }}>
           <div style={{ fontFamily: nimbus, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#775A19', marginBottom: 16 }}>Top Performing Content</div>
           <div className="flex flex-col items-center justify-center py-6">
@@ -403,7 +421,7 @@ function StudioContent({ navigate }) {
       <SectionTitle title="Studio" subtitle="Create & edit campaign visuals" />
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-3 gap-5 mb-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
         {[
           { icon: Image, label: 'Generate Visual', desc: 'AI-powered image creation' },
           { icon: FileText, label: 'Write Copy', desc: 'Generate campaign text' },
@@ -427,7 +445,7 @@ function StudioContent({ navigate }) {
       <div className="flex items-center justify-between mb-6">
         <span style={{ fontFamily: nimbus, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#775A19' }}>Templates</span>
       </div>
-      <div className="grid grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {templates.map(t => (
           <div key={t.title} onClick={() => navigate('/campaign/create')} className="rounded-lg overflow-hidden cursor-pointer group" style={{ background: '#F6F3F2' }}>
             <div className="overflow-hidden">
@@ -451,6 +469,7 @@ export default function Dashboard({ user, brand, onLogout }) {
   const [activeSection, setActiveSection] = useState('dashboard')
   const [dashboardData, setDashboardData] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     if (!user?.access_token) return
@@ -482,16 +501,28 @@ export default function Dashboard({ user, brand, onLogout }) {
 
   return (
     <div className="flex min-h-screen" style={{ background: '#FFFFFF' }}>
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/40 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
       {/* Sidebar */}
-      <aside className="w-[220px] shrink-0 flex flex-col justify-between border-r" style={{ borderColor: 'rgba(209,197,180,0.2)', background: '#FAFAF9' }}>
+      <aside
+        className={`fixed lg:static inset-y-0 left-0 z-50 w-[260px] lg:w-[220px] shrink-0 flex flex-col justify-between border-r transition-transform duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}
+        style={{ borderColor: 'rgba(209,197,180,0.2)', background: '#FAFAF9' }}
+      >
         <div>
-          <div className="px-6 pt-8 pb-8">
-            <div style={{ fontFamily: serif, fontSize: 20, fontWeight: 400, color: '#1C1B1B' }}>L'Atelier</div>
-            <div style={{ fontFamily: sans, fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1.2, color: '#A8A29E', marginTop: 2 }}>Marketing Suite</div>
+          <div className="px-6 pt-8 pb-8 flex items-start justify-between">
+            <div>
+              <div style={{ fontFamily: serif, fontSize: 20, fontWeight: 400, color: '#1C1B1B' }}>L'Atelier</div>
+              <div style={{ fontFamily: sans, fontSize: 9, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1.2, color: '#A8A29E', marginTop: 2 }}>Marketing Suite</div>
+            </div>
+            <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-1 cursor-pointer" style={{ color: '#78716C' }}>
+              <X size={20} />
+            </button>
           </div>
           <nav className="flex flex-col gap-1 px-3">
             {NAV_ITEMS.map(item => (
-              <button key={item.key} onClick={() => setActiveSection(item.key)}
+              <button key={item.key} onClick={() => { setActiveSection(item.key); setSidebarOpen(false) }}
                 className="flex items-center gap-3 px-4 py-3 rounded-lg text-left w-full transition-colors cursor-pointer"
                 style={{
                   background: activeSection === item.key ? 'rgba(119,90,25,0.06)' : 'transparent',
@@ -524,24 +555,29 @@ export default function Dashboard({ user, brand, onLogout }) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto w-full">
         {/* Top Bar */}
-        <div className="flex items-center justify-between px-10 pt-8 pb-6">
-          <div>
-            <h1 style={{ fontFamily: serif, fontSize: 32, fontWeight: 400, color: '#1C1B1B', lineHeight: 1.2 }}>{current.title}</h1>
-            <p style={{ fontFamily: sans, fontSize: 14, color: '#A8A29E', marginTop: 4 }}>{current.subtitle}</p>
+        <div className="flex items-center justify-between px-4 sm:px-6 lg:px-10 pt-6 sm:pt-8 pb-6 gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 -ml-2 cursor-pointer shrink-0" style={{ color: '#1C1B1B' }}>
+              <Menu size={22} />
+            </button>
+            <div className="min-w-0">
+              <h1 className="truncate" style={{ fontFamily: serif, fontWeight: 400, color: '#1C1B1B', lineHeight: 1.2, fontSize: 'clamp(20px, 4vw, 32px)' }}>{current.title}</h1>
+              <p className="hidden sm:block" style={{ fontFamily: sans, fontSize: 14, color: '#A8A29E', marginTop: 4 }}>{current.subtitle}</p>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button className="p-2.5 rounded-xl transition-colors cursor-pointer" style={{ color: '#A8A29E' }}><Bell size={20} /></button>
-            <button className="p-2.5 rounded-xl transition-colors cursor-pointer" style={{ color: '#A8A29E' }}><Settings size={20} /></button>
-            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ background: '#C5A059' }}>
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <button className="hidden sm:block p-2.5 rounded-xl transition-colors cursor-pointer" style={{ color: '#A8A29E' }}><Bell size={20} /></button>
+            <button className="hidden sm:block p-2.5 rounded-xl transition-colors cursor-pointer" style={{ color: '#A8A29E' }}><Settings size={20} /></button>
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center" style={{ background: '#C5A059' }}>
               <span style={{ color: 'white', fontFamily: sans, fontSize: 14, fontWeight: 600 }}>{brand?.storeName?.[0] || 'A'}</span>
             </div>
           </div>
         </div>
 
         {/* Content */}
-        <div className="px-10 pb-10">
+        <div className="px-4 sm:px-6 lg:px-10 pb-10">
           {activeSection === 'dashboard' && <DashboardContent navigate={navigate} activeTab={activeTab} setActiveTab={setActiveTab} stats={dashboardData?.stats} analytics={dashboardData?.analytics} campaigns={dashboardData?.campaigns} />}
           {activeSection === 'brand-identity' && <BrandIdentityContent brand={dashboardData?.brand || brand} />}
           {activeSection === 'campaigns' && <CampaignsContent navigate={navigate} campaigns={dashboardData?.campaigns} />}
@@ -550,9 +586,9 @@ export default function Dashboard({ user, brand, onLogout }) {
         </div>
 
         {/* Footer Status */}
-        <div className="px-10 pb-6">
-          <div className="flex items-center justify-between pt-6" style={{ borderTop: '1px solid rgba(209,197,180,0.15)' }}>
-            <div className="flex items-center gap-10">
+        <div className="px-4 sm:px-6 lg:px-10 pb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-6" style={{ borderTop: '1px solid rgba(209,197,180,0.15)' }}>
+            <div className="flex flex-wrap items-center gap-6 sm:gap-10">
               <div>
                 <div style={{ fontFamily: nimbus, fontSize: 9, fontWeight: 400, textTransform: 'uppercase', letterSpacing: 0.9, color: '#78716C' }}>Status</div>
                 <div className="flex items-center gap-2 mt-1">

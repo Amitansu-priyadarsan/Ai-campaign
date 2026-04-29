@@ -12,7 +12,7 @@ const nimbus = "'Nimbus Sans', Manrope, sans-serif"
 
 // Muse = subject type. Each value drives a different prompt set on the backend.
 const MUSE_OPTIONS = [
-  { type: 'indian_model', label: 'Indian Model', desc: 'Full beauty shot', image: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=400&fit=crop' },
+  { type: 'indian_model', label: 'Indian Model', desc: 'Full beauty shot', image: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=300&h=400&fit=crop', objectPosition: 'center 30%' },
   { type: 'jewelry_only', label: 'Jewelry Only', desc: 'Pure product, no model', image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=300&h=400&fit=crop' },
   { type: 'hand', label: 'Hand', desc: 'Rings & bracelets', image: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=300&h=400&fit=crop' },
   { type: 'neck', label: 'Neck', desc: 'Necklaces & earrings', image: 'https://images.unsplash.com/photo-1611652022419-a9419f74343d?w=300&h=400&fit=crop' },
@@ -199,8 +199,8 @@ export default function CampaignCreate({ brand }) {
         {/* Two Column Layout */}
         <div className="grid grid-cols-2 gap-0">
           {/* Left Column — Jewelry Asset */}
-          <div className="pr-4">
-            <div className="p-8 rounded-3xl" style={{ background: 'white', outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1 }}>
+          <div className="pr-4 flex">
+            <div className="p-8 rounded-3xl flex flex-col w-full" style={{ background: 'white', outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1 }}>
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
                 <div style={{ fontFamily: serif, fontSize: 24, fontWeight: 400, color: '#1C1B1B', lineHeight: '32px' }}>1. Jewelry Asset</div>
@@ -212,7 +212,7 @@ export default function CampaignCreate({ brand }) {
               {/* Upload Area */}
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="flex flex-col items-center justify-center rounded-2xl cursor-pointer transition-colors hover:bg-stone-100 overflow-hidden"
+                className="flex flex-col items-center justify-center rounded-2xl cursor-pointer transition-colors hover:bg-stone-100 overflow-hidden flex-1"
                 style={{ background: '#F6F3F2', outline: '2px dashed rgba(209,197,180,0.40)', outlineOffset: -2, minHeight: 320 }}
               >
                 {uploadedImage ? (
@@ -255,24 +255,26 @@ export default function CampaignCreate({ brand }) {
               <div className="mb-6" style={{ fontFamily: sans, fontSize: 12, fontWeight: 400, color: '#7F7667' }}>
                 Choose the subject of the shot. The 4 angle variations (front, three-quarter, close-up, profile) are generated automatically.
               </div>
-              <div className="grid grid-cols-5 gap-3">
+              <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
                 {MUSE_OPTIONS.map(muse => {
                   const active = selectedMuse === muse.type
                   return (
                     <div key={muse.type} onClick={() => { setSelectedMuse(muse.type); setSelectedCustomMuseId(null) }}
-                      className="rounded-lg overflow-hidden cursor-pointer transition-all flex flex-col"
+                      className="rounded-2xl overflow-hidden cursor-pointer flex flex-col transition-all duration-200 hover:-translate-y-0.5"
                       style={{
-                        outline: active ? '2px solid #775A19' : '1px solid rgba(209,197,180,0.30)',
-                        outlineOffset: -1,
                         background: 'white',
+                        boxShadow: active
+                          ? '0 0 0 2px #775A19, 0 12px 24px -12px rgba(119,90,25,0.40)'
+                          : '0 0 0 1px rgba(209,197,180,0.40), 0 2px 6px -2px rgba(28,27,27,0.06)',
                       }}>
-                      <div className="relative" style={{ height: 140 }}>
-                        <img src={muse.image} alt={muse.label} className="w-full h-full object-cover" style={{ filter: active ? 'none' : 'saturate(0.4)' }} />
-                        {active && <div className="absolute inset-0" style={{ background: 'rgba(119,90,25,0.10)' }} />}
+                      <div className="relative" style={{ aspectRatio: '4 / 5' }}>
+                        <img src={muse.image} alt={muse.label} className="absolute inset-0 w-full h-full object-cover transition-all duration-200"
+                          style={{ filter: active ? 'none' : 'saturate(0.5)', objectPosition: muse.objectPosition || 'center' }} />
+                        {active && <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(119,90,25,0.18), transparent 50%)' }} />}
                       </div>
-                      <div className="p-2" style={{ background: active ? 'rgba(119,90,25,0.08)' : '#F6F3F2' }}>
-                        <div style={{ fontFamily: sans, fontSize: 12, fontWeight: 700, color: active ? '#775A19' : '#1C1B1B', textAlign: 'center' }}>{muse.label}</div>
-                        <div style={{ fontFamily: sans, fontSize: 9, fontWeight: 400, color: '#7F7667', textAlign: 'center', marginTop: 2 }}>{muse.desc}</div>
+                      <div className="px-3 py-2.5" style={{ background: active ? 'linear-gradient(to bottom, rgba(119,90,25,0.06), white)' : 'white' }}>
+                        <div style={{ fontFamily: sans, fontSize: 12.5, fontWeight: 700, color: active ? '#775A19' : '#1C1B1B', textAlign: 'center', letterSpacing: 0.1 }}>{muse.label}</div>
+                        <div className="mt-0.5" style={{ fontFamily: sans, fontSize: 10, fontWeight: 400, color: '#7F7667', textAlign: 'center', lineHeight: '14px' }}>{muse.desc}</div>
                       </div>
                     </div>
                   )
@@ -282,31 +284,47 @@ export default function CampaignCreate({ brand }) {
                   const active = selectedMuse === 'custom' && selectedCustomMuseId === cm.id
                   return (
                     <div key={cm.id} onClick={() => { setSelectedMuse('custom'); setSelectedCustomMuseId(cm.id) }}
-                      className="rounded-lg overflow-hidden cursor-pointer transition-all flex flex-col relative group"
-                      style={{ outline: active ? '2px solid #775A19' : '1px solid rgba(209,197,180,0.30)', outlineOffset: -1, background: 'white' }}>
-                      <div className="relative" style={{ height: 140, background: '#F6F3F2' }}>
-                        {cm.image ? <img src={cm.image} alt={cm.label} className="w-full h-full object-cover" style={{ filter: active ? 'none' : 'saturate(0.5)' }} />
-                          : <div className="w-full h-full flex items-center justify-center" style={{ fontFamily: sans, fontSize: 11, color: '#A89A85' }}>No image</div>}
+                      className="rounded-2xl overflow-hidden cursor-pointer flex flex-col transition-all duration-200 hover:-translate-y-0.5 relative group"
+                      style={{
+                        background: 'white',
+                        boxShadow: active
+                          ? '0 0 0 2px #775A19, 0 12px 24px -12px rgba(119,90,25,0.40)'
+                          : '0 0 0 1px rgba(209,197,180,0.40), 0 2px 6px -2px rgba(28,27,27,0.06)',
+                      }}>
+                      <div className="relative" style={{ aspectRatio: '4 / 5', background: '#F6F3F2' }}>
+                        {cm.image ? <img src={cm.image} alt={cm.label} className="absolute inset-0 w-full h-full object-cover transition-all duration-200" style={{ filter: active ? 'none' : 'saturate(0.6)' }} />
+                          : <div className="absolute inset-0 flex items-center justify-center" style={{ fontFamily: sans, fontSize: 11, color: '#A89A85' }}>No image</div>}
+                        {active && <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(119,90,25,0.18), transparent 50%)' }} />}
                         <button onClick={(e) => { e.stopPropagation(); deleteCustom('muses', cm.id) }}
-                          className="absolute top-1 right-1 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
-                          style={{ background: 'rgba(28,27,27,0.7)' }}>
-                          <Trash2 size={12} style={{ color: 'white' }} />
+                          className="absolute top-2 right-2 p-1.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          style={{ background: 'rgba(28,27,27,0.75)', backdropFilter: 'blur(6px)' }}>
+                          <Trash2 size={11} style={{ color: 'white' }} />
                         </button>
                       </div>
-                      <div className="p-2" style={{ background: active ? 'rgba(119,90,25,0.08)' : '#F6F3F2' }}>
-                        <div style={{ fontFamily: sans, fontSize: 12, fontWeight: 700, color: active ? '#775A19' : '#1C1B1B', textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cm.label}</div>
-                        <div style={{ fontFamily: sans, fontSize: 9, fontWeight: 400, color: '#7F7667', textAlign: 'center', marginTop: 2 }}>Custom</div>
+                      <div className="px-3 py-2.5" style={{ background: active ? 'linear-gradient(to bottom, rgba(119,90,25,0.06), white)' : 'white' }}>
+                        <div style={{ fontFamily: sans, fontSize: 12.5, fontWeight: 700, color: active ? '#775A19' : '#1C1B1B', textAlign: 'center', letterSpacing: 0.1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cm.label}</div>
+                        <div className="mt-0.5" style={{ fontFamily: sans, fontSize: 10, fontWeight: 400, color: '#7F7667', textAlign: 'center' }}>Custom</div>
                       </div>
                     </div>
                   )
                 })}
                 {/* + Add Custom Muse */}
                 <div onClick={() => setModal('muses')}
-                  className="rounded-lg cursor-pointer transition-colors hover:bg-stone-100 overflow-hidden flex flex-col items-center justify-center"
-                  style={{ outline: '2px dashed rgba(209,197,180,0.40)', outlineOffset: -2, minHeight: 180 }}>
-                  <Plus size={22} style={{ color: '#D1C5B4' }} />
-                  <div className="mt-2" style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.9, color: '#7F7667', textAlign: 'center' }}>Add Custom</div>
-                  <div style={{ fontFamily: sans, fontSize: 9, color: '#A89A85', textAlign: 'center', marginTop: 2 }}>Save your own muse</div>
+                  className="rounded-2xl cursor-pointer flex flex-col overflow-hidden transition-all duration-200 hover:-translate-y-0.5"
+                  style={{
+                    background: 'transparent',
+                    boxShadow: 'inset 0 0 0 2px rgba(209,197,180,0.50)',
+                    backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(209,197,180,0.05) 6px, rgba(209,197,180,0.05) 12px)',
+                  }}>
+                  <div className="flex flex-col items-center justify-center" style={{ aspectRatio: '4 / 5' }}>
+                    <div className="rounded-full flex items-center justify-center" style={{ width: 44, height: 44, background: 'rgba(119,90,25,0.08)', border: '1px solid rgba(119,90,25,0.20)' }}>
+                      <Plus size={20} style={{ color: '#775A19' }} />
+                    </div>
+                  </div>
+                  <div className="px-3 py-2.5">
+                    <div style={{ fontFamily: sans, fontSize: 12.5, fontWeight: 700, color: '#775A19', textAlign: 'center', letterSpacing: 0.1 }}>Add Custom</div>
+                    <div className="mt-0.5" style={{ fontFamily: sans, fontSize: 10, fontWeight: 400, color: '#7F7667', textAlign: 'center' }}>Save your own muse</div>
+                  </div>
                 </div>
               </div>
             </div>
