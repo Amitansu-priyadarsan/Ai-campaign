@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Plus, Bell, Settings, LogOut, BarChart3, Compass, Megaphone, LineChart, Tv, Upload, Palette, Type, Image, Eye, TrendingUp, Calendar, Clock, Instagram, Facebook, Play, PauseCircle, FileText, Layers, Menu, X } from 'lucide-react'
+import { Plus, Bell, Settings, LogOut, BarChart3, Compass, Megaphone, Upload, Palette, Type, Image, Eye, TrendingUp, Calendar, Clock, Instagram, Facebook, Play, PauseCircle, FileText, Layers, Menu, X, User } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import Star from '../assets/Star'
@@ -10,8 +10,9 @@ const NAV_ITEMS = [
   { icon: BarChart3, label: 'Dashboard', key: 'dashboard' },
   { icon: Compass, label: 'Brand Identity', key: 'brand-identity' },
   { icon: Megaphone, label: 'Campaigns', key: 'campaigns' },
-  { icon: LineChart, label: 'Insights', key: 'insights' },
-  { icon: Tv, label: 'Studio', key: 'studio' },
+  { icon: User, label: 'Profile', key: 'profile' },
+  // { icon: LineChart, label: 'Insights', key: 'insights' },
+  // { icon: Tv, label: 'Studio', key: 'studio' },
 ]
 
 
@@ -462,37 +463,159 @@ function StudioContent({ navigate }) {
   )
 }
 
+/* ─── Section: Profile ─── */
+function ProfileContent({ meData }) {
+  const userInfo = meData?.user || {}
+  const brandInfo = meData?.brand || {}
+
+  return (
+    <>
+      <SectionTitle title="Profile" subtitle="Your account and brand details" />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* User Info */}
+        <div className="p-8 rounded-lg" style={{ background: '#F6F3F2' }}>
+          <div className="flex items-start gap-6">
+            <div className="w-20 h-20 rounded-full flex items-center justify-center shrink-0" style={{ background: '#C5A059' }}>
+              <span style={{ fontFamily: serif, fontSize: 32, color: 'white', fontWeight: 600 }}>{userInfo.name?.[0] || 'A'}</span>
+            </div>
+            <div className="flex-1">
+              <div style={{ fontFamily: serif, fontSize: 20, fontWeight: 400, color: '#1C1B1B', lineHeight: '28px', marginBottom: 12 }}>{userInfo.name || 'User'}</div>
+              <div style={{ fontFamily: nimbus, fontSize: 10, fontWeight: 400, textTransform: 'uppercase', letterSpacing: 0.9, color: '#78716C', marginBottom: 8 }}>Email</div>
+              <div style={{ fontFamily: sans, fontSize: 13, color: '#1C1B1B', marginBottom: 16 }}>{userInfo.email || '—'}</div>
+              {userInfo.company && (
+                <>
+                  <div style={{ fontFamily: nimbus, fontSize: 10, fontWeight: 400, textTransform: 'uppercase', letterSpacing: 0.9, color: '#78716C', marginBottom: 8 }}>Company</div>
+                  <div style={{ fontFamily: sans, fontSize: 13, color: '#1C1B1B' }}>{userInfo.company}</div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Brand Info */}
+        <div className="p-8 rounded-lg" style={{ background: '#F6F3F2' }}>
+          {brandInfo?.business_name ? (
+            <>
+              <div className="flex items-start gap-6">
+                <div className="w-20 h-20 rounded-xl flex items-center justify-center shrink-0" style={{ background: '#775A19' }}>
+                  {brandInfo.logo_preview ? (
+                    <img src={brandInfo.logo_preview} alt="Logo" className="w-full h-full object-contain rounded-xl" />
+                  ) : (
+                    <span style={{ fontFamily: serif, fontSize: 28, color: 'white' }}>{brandInfo.business_name?.[0] || 'B'}</span>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <div style={{ fontFamily: serif, fontSize: 20, fontWeight: 400, color: '#1C1B1B', lineHeight: '28px', marginBottom: 12 }}>{brandInfo.business_name}</div>
+                  {brandInfo.category && (
+                    <div style={{ fontFamily: sans, fontSize: 12, color: '#78716C', marginBottom: 8 }}>{brandInfo.category}{brandInfo.region && ` • ${brandInfo.region}`}</div>
+                  )}
+                  {brandInfo.style_preset && (
+                    <div className="mt-3 px-3 py-1.5 rounded-lg w-fit" style={{ background: 'rgba(119,90,25,0.08)', fontFamily: sans, fontSize: 10, fontWeight: 600, color: '#775A19', textTransform: 'uppercase' }}>
+                      {brandInfo.style_preset}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12">
+              <div style={{ fontFamily: serif, fontSize: 16, color: '#1C1B1B', marginBottom: 4 }}>Brand Profile Incomplete</div>
+              <div style={{ fontFamily: sans, fontSize: 13, color: '#78716C', textAlign: 'center', marginBottom: 12 }}>Complete your onboarding to set up your brand identity.</div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {brandInfo?.business_name && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Colors */}
+          <div className="p-8 rounded-lg" style={{ background: '#F6F3F2' }}>
+            <div className="flex items-center gap-3 mb-6">
+              <Palette size={18} style={{ color: '#775A19' }} />
+              <span style={{ fontFamily: nimbus, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#775A19' }}>Brand Colors</span>
+            </div>
+            <div className="flex gap-4">
+              {[
+                { label: 'Primary', color: brandInfo.primary_color },
+                { label: 'Secondary', color: brandInfo.secondary_color },
+                { label: 'Canvas', color: brandInfo.base_canvas },
+              ].map(({ label, color }) =>
+                color ? (
+                  <div key={label} className="flex flex-col items-center gap-2">
+                    <div className="w-16 h-16 rounded-xl" style={{ background: color, boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }} />
+                    <span style={{ fontFamily: sans, fontSize: 9, color: '#78716C', textTransform: 'uppercase', fontWeight: 500 }}>{label}</span>
+                  </div>
+                ) : null
+              )}
+            </div>
+          </div>
+
+          {/* Typography */}
+          <div className="p-8 rounded-lg" style={{ background: '#F6F3F2' }}>
+            <div className="flex items-center gap-3 mb-6">
+              <Type size={18} style={{ color: '#775A19' }} />
+              <span style={{ fontFamily: nimbus, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#775A19' }}>Typography</span>
+            </div>
+            {brandInfo.typography && (
+              <div>
+                <div style={{ fontFamily: nimbus, fontSize: 9, textTransform: 'uppercase', letterSpacing: 0.9, color: '#78716C', marginBottom: 4 }}>Heading Font</div>
+                <div style={{ fontFamily: serif, fontSize: 20, color: '#1C1B1B', marginBottom: 16 }}>{brandInfo.typography}</div>
+              </div>
+            )}
+            {brandInfo.base_canvas && (
+              <div>
+                <div style={{ fontFamily: nimbus, fontSize: 9, textTransform: 'uppercase', letterSpacing: 0.9, color: '#78716C', marginBottom: 4 }}>Canvas Color</div>
+                <div style={{ fontFamily: sans, fontSize: 13, color: '#1C1B1B' }}>{brandInfo.base_canvas}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 /* ─── Main Dashboard ─── */
 export default function Dashboard({ user, brand, onLogout }) {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('monthly')
   const [activeSection, setActiveSection] = useState('dashboard')
   const [dashboardData, setDashboardData] = useState(null)
+  const [meData, setMeData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   useEffect(() => {
     if (!user?.access_token) return
-    const fetchDashboard = async () => {
+    const fetchData = async () => {
       try {
-        const res = await fetch(`${API_URL}/dashboard`, {
-          headers: { 'Authorization': `Bearer ${user.access_token}` },
-        })
-        const data = await res.json()
-        if (data.success) setDashboardData(data)
+        const [dashRes, meRes] = await Promise.all([
+          fetch(`${API_URL}/dashboard`, {
+            headers: { 'Authorization': `Bearer ${user.access_token}` },
+          }),
+          fetch(`${API_URL}/me`, {
+            headers: { 'Authorization': `Bearer ${user.access_token}` },
+          }),
+        ])
+        const dashData = await dashRes.json()
+        const meDataRes = await meRes.json()
+        if (dashData.success) setDashboardData(dashData)
+        if (meDataRes.success) setMeData(meDataRes)
       } catch {
         // fallback to hardcoded data
       } finally {
         setLoading(false)
       }
     }
-    fetchDashboard()
+    fetchData()
   }, [user?.access_token])
 
   const PAGE_TITLES = {
     dashboard: { title: 'Good morning, Atelier.', subtitle: "Curating your brand's digital legacy." },
     'brand-identity': { title: 'Brand Identity', subtitle: 'Define and manage your visual DNA.' },
     campaigns: { title: 'Campaigns', subtitle: 'Create, schedule, and manage campaigns.' },
+    profile: { title: 'Profile', subtitle: 'Manage your account and brand details.' },
     insights: { title: 'Insights', subtitle: 'Understand your performance at a glance.' },
     studio: { title: 'Studio', subtitle: 'Design stunning campaign visuals.' },
   }
@@ -548,7 +671,7 @@ export default function Dashboard({ user, brand, onLogout }) {
             </button>
             <button onClick={onLogout} className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-left w-full cursor-pointer" style={{ color: '#A8A29E', fontFamily: sans, fontSize: 13 }}>
               <LogOut size={16} />
-              Account
+              Logout
             </button>
           </div>
         </div>
@@ -571,7 +694,7 @@ export default function Dashboard({ user, brand, onLogout }) {
             <button className="hidden sm:block p-2.5 rounded-xl transition-colors cursor-pointer" style={{ color: '#A8A29E' }}><Bell size={20} /></button>
             <button className="hidden sm:block p-2.5 rounded-xl transition-colors cursor-pointer" style={{ color: '#A8A29E' }}><Settings size={20} /></button>
             <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center" style={{ background: '#C5A059' }}>
-              <span style={{ color: 'white', fontFamily: sans, fontSize: 14, fontWeight: 600 }}>{brand?.storeName?.[0] || 'A'}</span>
+              <span style={{ color: 'white', fontFamily: sans, fontSize: 14, fontWeight: 600 }}>{meData?.user?.name?.[0] || brand?.storeName?.[0] || 'A'}</span>
             </div>
           </div>
         </div>
@@ -581,6 +704,7 @@ export default function Dashboard({ user, brand, onLogout }) {
           {activeSection === 'dashboard' && <DashboardContent navigate={navigate} activeTab={activeTab} setActiveTab={setActiveTab} stats={dashboardData?.stats} analytics={dashboardData?.analytics} campaigns={dashboardData?.campaigns} />}
           {activeSection === 'brand-identity' && <BrandIdentityContent brand={dashboardData?.brand || brand} />}
           {activeSection === 'campaigns' && <CampaignsContent navigate={navigate} campaigns={dashboardData?.campaigns} />}
+          {activeSection === 'profile' && <ProfileContent meData={meData} />}
           {activeSection === 'insights' && <InsightsContent stats={dashboardData?.stats} />}
           {activeSection === 'studio' && <StudioContent navigate={navigate} />}
         </div>
@@ -595,10 +719,6 @@ export default function Dashboard({ user, brand, onLogout }) {
                   <div className="w-2 h-2 rounded-full" style={{ background: '#22C55E' }} />
                   <span style={{ fontFamily: sans, fontSize: 12, fontWeight: 500, color: '#775A19' }}>AI Engine Ready</span>
                 </div>
-              </div>
-              <div>
-                <div style={{ fontFamily: nimbus, fontSize: 9, fontWeight: 400, textTransform: 'uppercase', letterSpacing: 0.9, color: '#78716C' }}>Last Update</div>
-                <span style={{ fontFamily: sans, fontSize: 12, fontWeight: 400, color: '#78716C', marginTop: 4, display: 'block' }}>12 mins ago</span>
               </div>
             </div>
             <div style={{ fontFamily: serif, fontSize: 13, fontWeight: 400, fontStyle: 'italic', color: '#D1C5B4' }}>"True luxury is found in the details."</div>

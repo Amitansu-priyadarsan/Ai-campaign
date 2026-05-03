@@ -30,6 +30,7 @@ const LOCATION_OPTIONS = ['Heirloom Setting', 'Palace Courtyard', 'Studio Minima
 export default function CampaignCreate({ brand }) {
   const navigate = useNavigate()
   const fileInputRef = useRef(null)
+  const cameraInputRef = useRef(null)
   const [uploadedImage, setUploadedImage] = useState(null)
   const [selectedMuse, setSelectedMuse] = useState('indian_model')
   const [selectedCustomMuseId, setSelectedCustomMuseId] = useState(null)
@@ -162,23 +163,23 @@ export default function CampaignCreate({ brand }) {
   return (
     <div className="min-h-screen" style={{ background: '#FCF9F8' }}>
       {/* Top Nav Bar */}
-      <div className="fixed top-0 left-0 right-0 z-20 flex items-center justify-between px-8 h-[80px]"
+      <div className="fixed top-0 left-0 right-0 z-20 flex flex-col sm:flex-row items-center justify-between px-4 sm:px-8 py-3 sm:h-[80px] gap-3 sm:gap-0"
         style={{ background: 'rgba(252,249,248,0.80)', borderBottom: '1px solid rgba(209,197,180,0.10)', backdropFilter: 'blur(12px)' }}>
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-2 sm:gap-6">
           <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 cursor-pointer transition-opacity hover:opacity-70"
             style={{ color: '#5F5E5E' }}>
             <ArrowLeft size={14} />
-            <span style={{ fontFamily: sans, fontSize: 14, fontWeight: 500 }}>Back to Dashboard</span>
+            <span className="hidden sm:inline" style={{ fontFamily: sans, fontSize: 14, fontWeight: 500 }}>Back to Dashboard</span>
           </button>
-          <div style={{ width: 1, height: 24, background: 'rgba(209,197,180,0.30)' }} />
-          <span style={{ fontFamily: serif, fontSize: 20, fontWeight: 400, fontStyle: 'italic', color: '#775A19' }}>Atelier AI Studio</span>
+          <div className="hidden sm:block" style={{ width: 1, height: 24, background: 'rgba(209,197,180,0.30)' }} />
+          <span style={{ fontFamily: serif, fontSize: 16, fontWeight: 400, fontStyle: 'italic', color: '#775A19' }}>Atelier AI Studio</span>
         </div>
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: '#F6F3F2' }}>
+        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-6 w-full sm:w-auto">
+          <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: '#F6F3F2' }}>
             <div className="w-2 h-2 rounded-full" style={{ background: '#775A19' }} />
             <span style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#5F5E5E' }}>Step 1: Configuration</span>
           </div>
-          <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 px-6 py-2.5 rounded-xl cursor-pointer transition-opacity hover:opacity-90"
+          <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl cursor-pointer transition-opacity hover:opacity-90 w-full sm:w-auto"
             style={{ background: '#313030', color: '#F3F0EF' }}>
             <X size={12} />
             <span style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>Exit Studio</span>
@@ -187,20 +188,20 @@ export default function CampaignCreate({ brand }) {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-[1280px] mx-auto px-8 pt-[128px] pb-12">
+      <div className="max-w-[1280px] mx-auto px-4 sm:px-8 pt-[100px] sm:pt-[128px] pb-8 sm:pb-12">
         {/* Title */}
-        <div className="mb-12">
-          <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 400, color: '#1C1B1B', lineHeight: '40px' }}>Campaign Configuration</h1>
-          <p className="mt-4 max-w-[672px]" style={{ fontFamily: sans, fontSize: 16, fontWeight: 400, color: '#5F5E5E', lineHeight: '24px' }}>
+        <div className="mb-8 sm:mb-12">
+          <h1 style={{ fontFamily: serif, fontSize: 'clamp(24px, 5vw, 36px)', fontWeight: 400, color: '#1C1B1B', lineHeight: '1.2' }}>Campaign Configuration</h1>
+          <p className="mt-2 sm:mt-4 max-w-[672px]" style={{ fontFamily: sans, fontSize: 'clamp(14px, 3vw, 16px)', fontWeight: 400, color: '#5F5E5E', lineHeight: '1.5' }}>
             Define the aesthetic foundations of your creative session. Upload your jewelry assets and select the environmental context for AI generation.
           </p>
         </div>
 
         {/* Two Column Layout */}
-        <div className="grid grid-cols-2 gap-0">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0">
           {/* Left Column — Jewelry Asset */}
-          <div className="pr-4 flex">
-            <div className="p-8 rounded-3xl flex flex-col w-full" style={{ background: 'white', outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1 }}>
+          <div className="lg:pr-4 flex">
+            <div className="p-4 sm:p-8 rounded-3xl flex flex-col w-full" style={{ background: 'white', outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1 }}>
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
                 <div style={{ fontFamily: serif, fontSize: 24, fontWeight: 400, color: '#1C1B1B', lineHeight: '32px' }}>1. Jewelry Asset</div>
@@ -213,19 +214,34 @@ export default function CampaignCreate({ brand }) {
               <div
                 onClick={() => fileInputRef.current?.click()}
                 className="flex flex-col items-center justify-center rounded-2xl cursor-pointer transition-colors hover:bg-stone-100 overflow-hidden flex-1"
-                style={{ background: '#F6F3F2', outline: '2px dashed rgba(209,197,180,0.40)', outlineOffset: -2, minHeight: 320 }}
+                style={{ background: '#F6F3F2', outline: '2px dashed rgba(209,197,180,0.40)', outlineOffset: -2, minHeight: 'clamp(240px, 50vh, 320px)' }}
               >
                 {uploadedImage ? (
-                  <img src={uploadedImage.url} alt="Uploaded jewelry" className="w-full h-[320px] object-contain" />
+                  <img src={uploadedImage.url} alt="Uploaded jewelry" className="w-full h-full object-contain" />
                 ) : (
-                  <div className="flex flex-col items-center p-6">
+                  <div className="flex flex-col items-center p-4 sm:p-6">
                     <Upload size={30} style={{ color: '#D1C5B4' }} />
-                    <div className="mt-3" style={{ fontFamily: sans, fontSize: 16, fontWeight: 600, color: '#1C1B1B', textAlign: 'center' }}>Upload High-Res Jewelry</div>
+                    <div className="mt-3" style={{ fontFamily: sans, fontSize: 'clamp(14px, 3vw, 16px)', fontWeight: 600, color: '#1C1B1B', textAlign: 'center' }}>Upload High-Res Jewelry</div>
                     <div className="mt-1" style={{ fontFamily: sans, fontSize: 12, fontWeight: 400, color: '#7F7667', textAlign: 'center' }}>PNG or TIFF with transparent background preferred</div>
                   </div>
                 )}
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
               </div>
+
+              {/* Mobile Camera & Upload Buttons */}
+              <div className="sm:hidden flex gap-3 mt-4 w-full">
+                <button onClick={() => cameraInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg cursor-pointer transition-colors"
+                  style={{ background: 'rgba(119,90,25,0.08)', color: '#775A19', fontFamily: sans, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 7l-5 5m0 0l-5-5m5 5v12m6-17h4a2 2 0 012 2v12a2 2 0 01-2 2h-4M9 2H5a2 2 0 00-2 2v12a2 2 0 002 2h4" /></svg>
+                  Camera
+                </button>
+                <button onClick={() => fileInputRef.current?.click()} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-lg cursor-pointer transition-colors"
+                  style={{ background: 'rgba(119,90,25,0.08)', color: '#775A19', fontFamily: sans, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
+                  <Upload size={14} />
+                  Upload
+                </button>
+              </div>
+              <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={handleFileUpload} />
 
               {/* Analyze Button */}
               <button className="w-full flex items-center justify-center gap-2 py-4 rounded-lg mt-6 cursor-pointer transition-opacity hover:opacity-80"
@@ -248,14 +264,14 @@ export default function CampaignCreate({ brand }) {
           </div>
 
           {/* Right Column — Muse Selection + Attire & Environment */}
-          <div className="pl-4 flex flex-col gap-8">
+          <div className="lg:pl-4 flex flex-col gap-6 sm:gap-8 mt-6 lg:mt-0">
             {/* Muse Selection */}
-            <div className="p-8 rounded-3xl" style={{ background: 'white', outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1 }}>
-              <div className="mb-2" style={{ fontFamily: serif, fontSize: 24, fontWeight: 400, color: '#1C1B1B', lineHeight: '32px' }}>2. Muse Selection</div>
-              <div className="mb-6" style={{ fontFamily: sans, fontSize: 12, fontWeight: 400, color: '#7F7667' }}>
+            <div className="p-4 sm:p-8 rounded-3xl" style={{ background: 'white', outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1 }}>
+              <div className="mb-2" style={{ fontFamily: serif, fontSize: 'clamp(18px, 4vw, 24px)', fontWeight: 400, color: '#1C1B1B', lineHeight: '1.2' }}>2. Muse Selection</div>
+              <div className="mb-4 sm:mb-6" style={{ fontFamily: sans, fontSize: 'clamp(11px, 2.5vw, 12px)', fontWeight: 400, color: '#7F7667' }}>
                 Choose the subject of the shot. The 4 angle variations (front, three-quarter, close-up, profile) are generated automatically.
               </div>
-              <div className="grid gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
+              <div className="grid gap-3 sm:gap-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))' }}>
                 {MUSE_OPTIONS.map(muse => {
                   const active = selectedMuse === muse.type
                   return (
@@ -330,10 +346,10 @@ export default function CampaignCreate({ brand }) {
             </div>
 
             {/* Attire & Environment */}
-            <div className="p-8 rounded-3xl" style={{ background: 'white', outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1 }}>
-              <div className="mb-6" style={{ fontFamily: serif, fontSize: 24, fontWeight: 400, color: '#1C1B1B', lineHeight: '32px' }}>3. Attire & Environment</div>
+            <div className="p-4 sm:p-8 rounded-3xl" style={{ background: 'white', outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1 }}>
+              <div className="mb-4 sm:mb-6" style={{ fontFamily: serif, fontSize: 'clamp(18px, 4vw, 24px)', fontWeight: 400, color: '#1C1B1B', lineHeight: '1.2' }}>3. Attire & Environment</div>
 
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 {/* Left: Draping */}
                 <div className="flex flex-col gap-4">
                   {/* Heritage Draping */}
@@ -452,9 +468,9 @@ export default function CampaignCreate({ brand }) {
       </div>
 
       {/* Bottom Bar */}
-      <div className="sticky bottom-0 left-0 right-0 px-8 py-6" style={{ borderTop: '1px solid rgba(209,197,180,0.10)', background: '#FCF9F8' }}>
-        <div className="max-w-[1280px] mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-10">
+      <div className="sticky bottom-0 left-0 right-0 px-4 sm:px-8 py-4 sm:py-6" style={{ borderTop: '1px solid rgba(209,197,180,0.10)', background: '#FCF9F8' }}>
+        <div className="max-w-[1280px] mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
+          <div className="flex flex-col gap-4 sm:gap-10 w-full sm:w-auto">
             <div>
               <div className="mb-1" style={{ fontFamily: sans, fontSize: 9, fontWeight: 400, textTransform: 'uppercase', letterSpacing: 1.8, color: '#7F7667' }}>Status</div>
               <div className="flex items-center gap-2">
@@ -462,7 +478,7 @@ export default function CampaignCreate({ brand }) {
                 <span style={{ fontFamily: sans, fontSize: 12, fontWeight: 700, color: '#1C1B1B' }}>Ready for Generation</span>
               </div>
             </div>
-            <div>
+            <div className="hidden sm:block">
               <div className="mb-1" style={{ fontFamily: sans, fontSize: 9, fontWeight: 400, textTransform: 'uppercase', letterSpacing: 1.8, color: '#7F7667' }}>Output Resolution</div>
               <div className="flex items-center gap-2">
                 <Monitor size={12} style={{ color: '#1C1B1B' }} />
@@ -470,8 +486,8 @@ export default function CampaignCreate({ brand }) {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <button className="px-8 py-4 cursor-pointer transition-opacity hover:opacity-70"
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+            <button className="hidden sm:block px-6 sm:px-8 py-3 sm:py-4 cursor-pointer transition-opacity hover:opacity-70"
               style={{ fontFamily: sans, fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.2, color: '#5F5E5E' }}>
               Save Preset
             </button>
@@ -480,7 +496,7 @@ export default function CampaignCreate({ brand }) {
             )}
             <button onClick={handleGenerate}
               disabled={!uploadedImage || generating}
-              className="flex items-center gap-3 px-10 py-5 rounded-xl cursor-pointer transition-opacity hover:opacity-90"
+              className="flex items-center justify-center gap-2 px-6 py-3 sm:px-10 sm:py-5 rounded-xl cursor-pointer transition-opacity hover:opacity-90"
               style={{
                 background: 'linear-gradient(90deg, #775A19, #C5A059)',
                 boxShadow: '0px 25px 50px -12px rgba(119,90,25,0.30)',
@@ -490,11 +506,11 @@ export default function CampaignCreate({ brand }) {
               {generating ? (
                 <>
                   <Loader2 size={15} className="animate-spin" style={{ color: 'white' }} />
-                  <span style={{ fontFamily: sans, fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2.1, color: 'white' }}>Generating...</span>
+                  <span style={{ fontFamily: sans, fontSize: 'clamp(11px, 2.5vw, 14px)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'white' }}>Generating...</span>
                 </>
               ) : (
                 <>
-                  <span style={{ fontFamily: sans, fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2.1, color: 'white' }}>Next: Creative Canvas</span>
+                  <span style={{ fontFamily: sans, fontSize: 'clamp(11px, 2.5vw, 14px)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'white' }}>Next: Creative Canvas</span>
                   <ArrowRight size={15} style={{ color: 'white' }} />
                 </>
               )}

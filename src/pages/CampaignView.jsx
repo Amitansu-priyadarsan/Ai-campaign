@@ -78,40 +78,40 @@ export default function CampaignView() {
 
   return (
     <div className="min-h-screen" style={{ background: '#FCF9F8' }}>
-      <div className="fixed top-0 left-0 right-0 z-20 flex items-center justify-between px-8 h-[80px]"
+      <div className="fixed top-0 left-0 right-0 z-20 flex flex-col sm:flex-row items-center justify-between px-4 sm:px-8 py-3 sm:h-[80px] gap-2 sm:gap-0"
         style={{ background: 'rgba(252,249,248,0.80)', borderBottom: '1px solid rgba(209,197,180,0.10)', backdropFilter: 'blur(12px)' }}>
         <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 cursor-pointer" style={{ color: '#5F5E5E' }}>
           <ArrowLeft size={14} />
-          <span style={{ fontFamily: sans, fontSize: 14, fontWeight: 500 }}>Back to Dashboard</span>
+          <span className="hidden sm:inline" style={{ fontFamily: sans, fontSize: 14, fontWeight: 500 }}>Back to Dashboard</span>
         </button>
-        <span style={{ fontFamily: serif, fontSize: 20, fontStyle: 'italic', color: '#775A19' }}>Atelier AI Studio</span>
+        <span style={{ fontFamily: serif, fontSize: 16, fontStyle: 'italic', color: '#775A19' }}>Atelier AI Studio</span>
         <button onClick={handleExportAll} disabled={displayImages.length === 0}
-          className="flex items-center gap-2 px-6 py-2.5 rounded-xl cursor-pointer"
+          className="flex items-center justify-center gap-1 sm:gap-2 px-3 sm:px-6 py-2 sm:py-2.5 rounded-xl cursor-pointer text-sm"
           style={{ background: '#775A19', color: 'white', fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, opacity: displayImages.length === 0 ? 0.5 : 1 }}>
-          <Download size={12} /> Export All ({displayImages.length})
+          <Download size={12} /> <span className="hidden sm:inline">Export All ({displayImages.length})</span><span className="sm:hidden">Export</span>
         </button>
       </div>
 
-      <div className="max-w-[1280px] mx-auto px-8 pt-[112px] pb-12">
+      <div className="max-w-[1280px] mx-auto px-4 sm:px-8 pt-[100px] sm:pt-[112px] pb-8 sm:pb-12">
         <div style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 3, color: '#775A19', marginBottom: 8 }}>
           {campaign.status} &bull; {campaign.platform}
         </div>
-        <h1 style={{ fontFamily: serif, fontSize: 36, color: '#1C1B1B', marginBottom: 32 }}>{campaign.title}</h1>
+        <h1 style={{ fontFamily: serif, fontSize: 'clamp(24px, 5vw, 36px)', color: '#1C1B1B', marginBottom: 'clamp(16px, 4vw, 32px)' }}>{campaign.title}</h1>
 
-        <div className="flex gap-8 mb-12">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 mb-8 sm:mb-12">
           <div className="flex-1 rounded-3xl overflow-hidden" style={{ background: '#F6F3F2', outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1 }}>
             {hero ? (
-              <img src={hero.image} alt={hero.label} className="w-full object-cover" style={{ minHeight: 600 }} />
+              <img src={hero.image} alt={hero.label} className="w-full object-cover" style={{ minHeight: 'clamp(300px, 60vw, 600px)' }} />
             ) : (
-              <div style={{ minHeight: 600 }} className="w-full flex items-center justify-center">
+              <div style={{ minHeight: 'clamp(300px, 60vw, 600px)' }} className="w-full flex items-center justify-center">
                 <span style={{ fontFamily: sans, fontSize: 14, color: '#7F7667' }}>No images available</span>
               </div>
             )}
           </div>
 
-          <div className="w-[360px] shrink-0 flex flex-col gap-6">
-            <div className="p-8 rounded-3xl" style={{ background: 'white', outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1 }}>
-              <div className="mb-6" style={{ fontFamily: serif, fontSize: 20, color: '#1C1B1B' }}>Campaign Metadata</div>
+          <div className="w-full lg:w-[360px] lg:shrink-0 flex flex-col gap-4 sm:gap-6">
+            <div className="p-4 sm:p-8 rounded-3xl" style={{ background: 'white', outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1 }}>
+              <div className="mb-4 sm:mb-6" style={{ fontFamily: serif, fontSize: 'clamp(16px, 3vw, 20px)', color: '#1C1B1B' }}>Campaign Metadata</div>
               {[
                 { label: 'Model', value: meta.muse || '—' },
                 { label: 'Attire', value: meta.draping || '—' },

@@ -220,22 +220,22 @@ export default function CampaignEditor({ brand }) {
 
   /* ─── Shared Top Nav ─── */
   const TopNav = ({ backLabel, backAction, stepLabel }) => (
-    <div className="fixed top-0 left-0 right-0 z-20 flex items-center justify-between px-8 h-[80px]"
+    <div className="fixed top-0 left-0 right-0 z-20 flex flex-col sm:flex-row items-center justify-between px-4 sm:px-8 py-3 sm:h-[80px] gap-3 sm:gap-0"
       style={{ background: 'rgba(252,249,248,0.80)', borderBottom: '1px solid rgba(209,197,180,0.10)', backdropFilter: 'blur(12px)' }}>
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-2 sm:gap-6">
         <button onClick={backAction} className="flex items-center gap-2 cursor-pointer transition-opacity hover:opacity-70" style={{ color: '#5F5E5E' }}>
           <ArrowLeft size={14} />
-          <span style={{ fontFamily: sans, fontSize: 14, fontWeight: 500 }}>{backLabel}</span>
+          <span className="hidden sm:inline" style={{ fontFamily: sans, fontSize: 14, fontWeight: 500 }}>{backLabel}</span>
         </button>
-        <div style={{ width: 1, height: 24, background: 'rgba(209,197,180,0.30)' }} />
-        <span style={{ fontFamily: serif, fontSize: 20, fontWeight: 400, fontStyle: 'italic', color: '#775A19' }}>Atelier AI Studio</span>
+        <div className="hidden sm:block" style={{ width: 1, height: 24, background: 'rgba(209,197,180,0.30)' }} />
+        <span style={{ fontFamily: serif, fontSize: 16, fontWeight: 400, fontStyle: 'italic', color: '#775A19' }}>Atelier AI Studio</span>
       </div>
-      <div className="flex items-center gap-6">
-        <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: '#F6F3F2' }}>
+      <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-6 w-full sm:w-auto">
+        <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: '#F6F3F2' }}>
           <div className="w-2 h-2 rounded-full" style={{ background: '#775A19' }} />
           <span style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#5F5E5E' }}>{stepLabel}</span>
         </div>
-        <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 px-6 py-2.5 rounded-xl cursor-pointer transition-opacity hover:opacity-90"
+        <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl cursor-pointer transition-opacity hover:opacity-90 w-full sm:w-auto"
           style={{ background: '#313030', color: '#F3F0EF' }}>
           <X size={12} />
           <span style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>Exit Studio</span>
@@ -252,27 +252,27 @@ export default function CampaignEditor({ brand }) {
       <div className="min-h-screen" style={{ background: '#FCF9F8' }}>
         <TopNav backLabel="Back to Dashboard" backAction={() => navigate('/dashboard')} stepLabel="Gemology AI v4.2 Active" />
 
-        <div className="max-w-[1152px] mx-auto px-8 pt-[112px] pb-12">
+        <div className="max-w-[1152px] mx-auto px-4 sm:px-8 pt-[100px] sm:pt-[112px] pb-8 sm:pb-12">
           {/* Header Row */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: '#F6F3F2' }}>
-                <div className="w-2 h-2 rounded-full" style={{ background: '#775A19' }} />
-                <span style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#5F5E5E' }}>Step 2: Creative Canvas</span>
-              </div>
-              <span style={{ fontFamily: serif, fontSize: 24, fontWeight: 400, color: '#1C1B1B' }}>Generation Canvas</span>
+          <div className="flex flex-wrap items-center gap-3 mb-6 sm:mb-8">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl" style={{ background: '#F6F3F2' }}>
+              <div className="w-2 h-2 rounded-full" style={{ background: '#775A19' }} />
+              <span style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#5F5E5E' }}>Step 2: Creative Canvas</span>
             </div>
-            <div className="flex items-center gap-4">
+            <span style={{ fontFamily: serif, fontSize: 'clamp(18px, 4vw, 24px)', fontWeight: 400, color: '#1C1B1B' }}>Generation Canvas</span>
+            <div className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-4 mt-2 sm:mt-0 sm:ml-auto">
               <button onClick={() => navigate('/campaign/create')}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-xl cursor-pointer transition-opacity hover:opacity-80"
+                className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl cursor-pointer transition-opacity hover:opacity-80 text-sm"
                 style={{ background: '#F0EDED', outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1 }}>
                 <ArrowLeft size={10} style={{ color: '#4E4639' }} />
-                <span style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#4E4639' }}>Back to Configuration</span>
+                <span className="hidden sm:inline" style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#4E4639' }}>Back to Configuration</span>
+                <span className="sm:hidden" style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#4E4639' }}>Back</span>
               </button>
               <button onClick={() => { if (selectedVariations.size > 0) setStep(3) }}
-                className="flex items-center gap-2 px-8 py-2.5 rounded-xl cursor-pointer transition-opacity hover:opacity-90"
+                className="flex items-center justify-center gap-2 px-4 sm:px-8 py-2 sm:py-2.5 rounded-xl cursor-pointer transition-opacity hover:opacity-90 text-sm"
                 style={{ background: '#775A19', boxShadow: '0px 4px 6px -4px rgba(119,90,25,0.20), 0px 10px 15px -3px rgba(119,90,25,0.20)', opacity: selectedVariations.size > 0 ? 1 : 0.5 }}>
-                <span style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'white' }}>Proceed to Step 3: Final Review</span>
+                <span className="hidden sm:inline" style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'white' }}>Proceed to Step 3: Final Review</span>
+                <span className="sm:hidden" style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'white' }}>Next Step</span>
                 <ArrowRight size={10} style={{ color: 'white' }} />
               </button>
             </div>
@@ -284,8 +284,8 @@ export default function CampaignEditor({ brand }) {
             </div>
           )}
 
-          {/* Variation Grid — 4 columns, all selectable */}
-          <div className="grid grid-cols-4 gap-4 mb-12">
+          {/* Variation Grid — 2 columns on mobile, 4 on desktop */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8 sm:mb-12">
             {/* Arrived images */}
             {variations.map(v => {
               const isSelected = selectedVariations.has(v.id)
@@ -302,7 +302,7 @@ export default function CampaignEditor({ brand }) {
                   onMouseEnter={() => setHoveredVariation(v.id)}
                   onMouseLeave={() => setHoveredVariation(null)}
                 >
-                  <img src={v.image} alt={v.label} className="w-full h-[358px] object-cover" />
+                  <img src={v.image} alt={v.label} className="w-full h-[200px] sm:h-[280px] lg:h-[358px] object-cover" />
 
                   {/* Selected overlay */}
                   {isSelected && (
@@ -336,7 +336,7 @@ export default function CampaignEditor({ brand }) {
             {/* Shimmer placeholders for remaining slots */}
             {(loading || regenerating) && PLACEHOLDERS.slice(variations.length).map(p => (
               <div key={p.id} className="relative rounded-2xl overflow-hidden"
-                style={{ outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1, height: 358, background: '#F6F3F2' }}>
+                style={{ outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1, height: 'clamp(200px, 50vw, 358px)', background: '#F6F3F2' }}>
                 <div className="shimmer-block" style={{ width: '100%', height: '100%' }} />
                 <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
                   <span style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#7F7667' }}>{p.label}</span>
@@ -431,16 +431,16 @@ export default function CampaignEditor({ brand }) {
         </div>
       )}
 
-      <div className="max-w-[1280px] mx-auto px-8 pt-[128px] pb-12">
+      <div className="max-w-[1280px] mx-auto px-4 sm:px-8 pt-[100px] sm:pt-[128px] pb-8 sm:pb-12">
         {/* Title Row */}
-        <div className="flex items-end justify-between mb-12">
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 sm:mb-12">
           <div>
             <div style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 3, color: '#775A19', marginBottom: 8 }}>Final Step</div>
-            <h1 style={{ fontFamily: serif, fontSize: 36, fontWeight: 400, color: '#1C1B1B', lineHeight: '40px' }}>Step 3: Final Review</h1>
+            <h1 style={{ fontFamily: serif, fontSize: 'clamp(24px, 5vw, 36px)', fontWeight: 400, color: '#1C1B1B', lineHeight: '1.2' }}>Step 3: Final Review</h1>
           </div>
           <button onClick={handleExport}
             disabled={variations.length === 0}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-xl cursor-pointer transition-opacity hover:opacity-80"
+            className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl cursor-pointer transition-opacity hover:opacity-80 text-sm"
             style={{ background: '#F0EDED', outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1, opacity: variations.length === 0 ? 0.5 : 1 }}>
             <Download size={10} style={{ color: '#4E4639' }} />
             <span style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#4E4639' }}>
@@ -450,14 +450,14 @@ export default function CampaignEditor({ brand }) {
         </div>
 
         {/* Content: Image + Metadata side by side */}
-        <div className="flex gap-8 mb-12">
+        <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 mb-8 sm:mb-12">
           {/* Main Image */}
           <div className="flex-1 relative rounded-3xl overflow-hidden"
             style={{ background: '#F6F3F2', boxShadow: '0px 40px 100px -20px rgba(119,90,25,0.15)', outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1 }}>
             {reviewVariation ? (
-              <img src={reviewVariation.image} alt="Final render" className="w-full object-cover" style={{ minHeight: 600 }} />
+              <img src={reviewVariation.image} alt="Final render" className="w-full object-cover" style={{ minHeight: 'clamp(300px, 60vw, 600px)' }} />
             ) : (
-              <div style={{ minHeight: 600 }} className="w-full flex items-center justify-center">
+              <div style={{ minHeight: 'clamp(300px, 60vw, 600px)' }} className="w-full flex items-center justify-center">
                 <span style={{ fontFamily: sans, fontSize: 14, color: '#7F7667' }}>No selection</span>
               </div>
             )}
@@ -470,10 +470,10 @@ export default function CampaignEditor({ brand }) {
           </div>
 
           {/* Right Panel */}
-          <div className="w-[360px] shrink-0 flex flex-col gap-8">
+          <div className="w-full lg:w-[360px] lg:shrink-0 flex flex-col gap-4 sm:gap-6 lg:gap-8">
             {/* Campaign Metadata */}
-            <div className="p-8 rounded-3xl" style={{ background: 'white', boxShadow: '0px 1px 2px rgba(0,0,0,0.05)', outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1 }}>
-              <div className="mb-6" style={{ fontFamily: serif, fontSize: 20, fontWeight: 400, color: '#1C1B1B' }}>Campaign Metadata</div>
+            <div className="p-4 sm:p-8 rounded-3xl" style={{ background: 'white', boxShadow: '0px 1px 2px rgba(0,0,0,0.05)', outline: '1px solid rgba(209,197,180,0.20)', outlineOffset: -1 }}>
+              <div className="mb-4 sm:mb-6" style={{ fontFamily: serif, fontSize: 'clamp(16px, 3vw, 20px)', fontWeight: 400, color: '#1C1B1B' }}>Campaign Metadata</div>
               {[
                 { label: 'Jewelry', value: metadata ? 'Uploaded Asset' : 'Diamond Ring' },
                 { label: 'Model', value: metadata ? metadata.muse : 'Selected (AI Muse #1)' },
@@ -531,16 +531,16 @@ export default function CampaignEditor({ brand }) {
         </div>
 
         {/* Bottom Bar */}
-        <div className="flex items-center justify-between pt-10" style={{ borderTop: '1px solid rgba(209,197,180,0.10)' }}>
-          <div className="flex items-center gap-10">
-            <div>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pt-6 sm:pt-10" style={{ borderTop: '1px solid rgba(209,197,180,0.10)' }}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-10 w-full sm:w-auto">
+            <div className="hidden sm:block">
               <div className="mb-1" style={{ fontFamily: sans, fontSize: 9, textTransform: 'uppercase', letterSpacing: 1.8, color: '#7F7667' }}>Creation Log</div>
               <div className="flex items-center gap-2">
                 <Clock size={10} style={{ color: '#5F5E5E' }} />
                 <span style={{ fontFamily: sans, fontSize: 12, fontWeight: 700, color: '#1C1B1B' }}>Completed in 42s &bull; Iteration #1</span>
               </div>
             </div>
-            <div>
+            <div className="hidden sm:block">
               <div className="mb-1" style={{ fontFamily: sans, fontSize: 9, textTransform: 'uppercase', letterSpacing: 1.8, color: '#7F7667' }}>Encrypted Pipeline</div>
               <div className="flex items-center gap-2">
                 <Lock size={10} style={{ color: '#5F5E5E' }} />
@@ -548,22 +548,22 @@ export default function CampaignEditor({ brand }) {
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-6">
-            <button className="px-8 py-4 cursor-pointer transition-opacity hover:opacity-70"
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+            <button className="hidden sm:block px-6 sm:px-8 py-3 sm:py-4 cursor-pointer transition-opacity hover:opacity-70"
               style={{ fontFamily: sans, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#5F5E5E' }}>
               Preview on Device
             </button>
             <button onClick={handlePublish} disabled={publishing || published}
-              className="flex items-center gap-3 px-12 py-5 rounded-xl cursor-pointer transition-opacity hover:opacity-90"
+              className="flex items-center justify-center gap-2 px-6 sm:px-12 py-3 sm:py-5 rounded-xl cursor-pointer transition-opacity hover:opacity-90"
               style={{ background: 'linear-gradient(90deg, #775A19, #C5A059)', boxShadow: '0px 25px 50px -12px rgba(119,90,25,0.30)', opacity: publishing || published ? 0.6 : 1 }}>
               {publishing ? (
                 <>
                   <Loader2 size={15} className="animate-spin" style={{ color: 'white' }} />
-                  <span style={{ fontFamily: sans, fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2.1, color: 'white' }}>Publishing...</span>
+                  <span style={{ fontFamily: sans, fontSize: 'clamp(10px, 2.5vw, 14px)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'white' }}>Publishing...</span>
                 </>
               ) : (
                 <>
-                  <span style={{ fontFamily: sans, fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 2.1, color: 'white' }}>Finalize & Publish</span>
+                  <span style={{ fontFamily: sans, fontSize: 'clamp(10px, 2.5vw, 14px)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: 'white' }}>Finalize & Publish</span>
                   <Star />
                 </>
               )}

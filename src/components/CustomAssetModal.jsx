@@ -47,10 +47,10 @@ export default function CustomAssetModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: 'rgba(28,27,27,0.50)', backdropFilter: 'blur(4px)' }}>
-      <div className="rounded-3xl p-8 w-[480px]" style={{ background: 'white', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
-        <div className="flex items-center justify-between mb-6">
-          <div style={{ fontFamily: serif, fontSize: 22, fontWeight: 400, color: '#1C1B1B' }}>{title}</div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0" style={{ background: 'rgba(28,27,27,0.50)', backdropFilter: 'blur(4px)' }}>
+      <div className="rounded-2xl sm:rounded-3xl p-6 sm:p-8 w-full sm:max-w-[480px]" style={{ background: 'white', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)' }}>
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <div style={{ fontFamily: serif, fontSize: 'clamp(18px, 4vw, 22px)', fontWeight: 400, color: '#1C1B1B' }}>{title}</div>
           <button onClick={close} className="cursor-pointer" style={{ color: '#7F7667' }}><X size={18} /></button>
         </div>
 
